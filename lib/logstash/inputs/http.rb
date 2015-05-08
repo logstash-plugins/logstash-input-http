@@ -46,7 +46,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # mostly due to rack compliance
   REJECTED_HEADERS = ["puma.socket", "rack.hijack?", "rack.hijack", "rack.url_scheme", "rack.after_reply", "rack.version", "rack.errors", "rack.multithread", "rack.multiprocess", "rack.run_once", "SCRIPT_NAME", "QUERY_STRING", "SERVER_PROTOCOL", "SERVER_SOFTWARE", "GATEWAY_INTERFACE"]
 
-  RESPONSE_HEADERS = {'Content-Type' => 'text/html'}
+  RESPONSE_HEADERS = {'Content-Type' => 'text/plain'}
 
   public
   def register
@@ -55,9 +55,9 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       ctx = Puma::MiniSSL::Context.new
       ctx.keystore = @keystore
       ctx.keystore_pass = @keystore_password.value
-      @server.add_ssl_listener @host, @port, ctx
+      @server.add_ssl_listener(@host, @port, ctx)
     else
-      @server.add_tcp_listener @host, @port
+      @server.add_tcp_listener(@host, @port)
     end
     @server.min_threads = 0
     @server.max_threads = @max_threads
