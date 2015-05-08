@@ -27,7 +27,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   config :port, :validate => :number, :default => 8080
 
   # Maximum number of threads to use
-  config :max_threads, :validate => :number, :default => 4
+  config :threads, :validate => :number, :default => 4
 
   # SSL Configurations
   #
@@ -60,7 +60,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       @server.add_tcp_listener(@host, @port)
     end
     @server.min_threads = 0
-    @server.max_threads = @max_threads
+    @server.max_threads = @threads
   end # def register
 
   def run(queue)
