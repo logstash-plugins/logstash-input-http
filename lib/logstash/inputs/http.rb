@@ -52,6 +52,9 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   def register
     @server = ::Puma::Server.new(nil) # we'll set the rack handler later
     if @ssl
+      if @keystore.nil? || @keystore_password.nil?
+        raise(LogStash::ConfigurationError, "Settings :keystore and :keystore_password are required because :ssl is enabled.")
+      end
       ctx = Puma::MiniSSL::Context.new
       ctx.keystore = @keystore
       ctx.keystore_pass = @keystore_password.value

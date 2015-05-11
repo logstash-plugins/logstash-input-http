@@ -19,6 +19,26 @@ describe LogStash::Inputs::Http do
       queue.pop
     end
 
-    insist { event["message"] } == "Hello"
+  context "with :ssl => false" do
+    subject { LogStash::Inputs::Http.new("ssl" => false) }
+    it "should not raise exception" do
+      expect { subject.register }.to_not raise_exception
+    end
+  end
+  context "with :ssl => true" do
+    context "without :keystore and :keystore_password" do
+      subject { LogStash::Inputs::Http.new("ssl" => true) }
+      it "should raise exception" do
+        expect { subject.register }.to raise_exception(LogStash::ConfigurationError)
+      end
+    end
+    context "with :keystore and :keystore_password" do
+      subject { LogStash::Inputs::Http.new("ssl" => true,
+                                           "keystore" => "/tmp/keystore.jks",
+                                           "keystore_password" => "pass") }
+      it "should not raise exception" do
+        expect { subject.register }.to_not raise_exception
+      end
+    end
   end
 end
