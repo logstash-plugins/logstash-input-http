@@ -97,7 +97,13 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   public
   def teardown
-    @server.stop(true)
+    if @server
+      @server.stop(true)
+      begin
+        @server.binder.close if @server.binder
+      rescue IOError
+      end
+    end
   end
 
 end # class LogStash::Inputs::Http

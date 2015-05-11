@@ -6,18 +6,22 @@ require "ftw"
 describe LogStash::Inputs::Http do
 
   let(:agent) { FTW::Agent.new }
+  let(:queue) { Queue.new }
 
-  it "should read events with json codec" do
-    conf = <<-CONFIG
-      input {
-        http { codec => json }
-      }
-    CONFIG
+  after :each do
+    subject.teardown
+  end
 
-    event = input(conf) do |pipeline, queue|
-      agent.post!("http://127.0.0.1:8080/meh.json", :body => { "message" => "Hello" }.to_json)
-      queue.pop
+  context "with json codec" do
+    subject { LogStash::Inputs::Http.new("codec" => "json") }
+    it "should parse the json body" do
+      subject.register
+      Thread.new { subject.run(queue) }
+      agent.post!("http://localhost:8080/meh.json", :body => { "message" => "Hello" }.to_json)
+      event = queue.pop
+      expect(event["message"]).to eq("Hello")
     end
+  end
 
   context "with :ssl => false" do
     subject { LogStash::Inputs::Http.new("ssl" => false) }
