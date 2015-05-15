@@ -42,6 +42,10 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # Set the truststore password
   config :keystore_password, :validate => :password
 
+  # here you can describe how to decode specific content-types
+  # by default the default codec will be used
+  config :additional_codecs, :validate => :hash, :default => { "application/json" => "json" }
+
   # useless headers puma adds to the requests
   # mostly due to rack compliance
   REJECTED_HEADERS = ["puma.socket", "rack.hijack?", "rack.hijack", "rack.url_scheme", "rack.after_reply", "rack.version", "rack.errors", "rack.multithread", "rack.multiprocess", "rack.run_once", "SCRIPT_NAME", "QUERY_STRING", "SERVER_PROTOCOL", "SERVER_SOFTWARE", "GATEWAY_INTERFACE"]
@@ -64,6 +68,10 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     end
     @server.min_threads = 0
     @server.max_threads = @threads
+    @codecs = Hash.new(@codec)
+    @additional_codecs.each do |content_type, codec|
+      @codecs[content_type] = LogStash::Plugin.lookup("codec", "json").new
+    end
   end # def register
 
   def run(queue)
@@ -72,7 +80,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
         REJECTED_HEADERS.each {|k| req.delete(k) }
         req = lowercase_keys(req)
         body = req.delete("rack.input")
-        @codec.decode(body.read) do |event|
+        @codecs[req["content_type"]].decode(body.read) do |event|
           event["headers"] = req
           decorate(event)
           queue << event
