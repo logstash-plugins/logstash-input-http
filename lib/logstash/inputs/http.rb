@@ -29,6 +29,10 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # Maximum number of threads to use
   config :threads, :validate => :number, :default => 4
 
+  # Basic Auth
+  config :user, :validate => :string, :required => false
+  config :password, :validate => :password, :required => false
+
   # SSL Configurations
   #
   # Enable SSL
@@ -55,6 +59,10 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   public
   def register
     @server = ::Puma::Server.new(nil) # we'll set the rack handler later
+    if @user && @password then
+      token = Base64.strict_encode64("#{@user}:#{@password.value}")
+      @auth_token = "Basic #{token}"
+    end
     if @ssl
       if @keystore.nil? || @keystore_password.nil?
         raise(LogStash::ConfigurationError, "Settings :keystore and :keystore_password are required because :ssl is enabled.")
@@ -75,11 +83,20 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   end # def register
 
   def run(queue)
-    @server.app = Proc.new do |req|
+    @server.app = lambda do |req|
       begin
         REJECTED_HEADERS.each {|k| req.delete(k) }
         req = lowercase_keys(req)
         body = req.delete("rack.input")
+        if @auth_token
+          if req["http_authorization"] then
+            if req["http_authorization"] != @auth_token
+              return ['403', RESPONSE_HEADERS, []]
+            end
+          else
+            return ['401', RESPONSE_HEADERS, []]
+          end
+        end
         @codecs.fetch(req["content_type"], @codec).decode(body.read) do |event|
           event["headers"] = req
           decorate(event)

@@ -87,4 +87,53 @@ describe LogStash::Inputs::Http do
       end
     end
   end
+  describe "basic auth" do
+    user = "test"; password = "pwd"
+    subject { LogStash::Inputs::Http.new("user" => user, "password" => password) }
+    let(:auth_token) { Base64.strict_encode64("#{user}:#{password}") }
+    before :each do
+      subject.register
+      Thread.new { subject.run(queue) }
+    end
+    context "when client doesn't present auth token" do
+      let!(:response) { agent.post!("http://localhost:8080/meh", :body => "hi") }
+      it "should respond with 401" do
+        expect(response.status).to eq(401)
+      end
+      it "should not generate an event" do
+        expect(queue).to be_empty
+      end
+    end
+    context "when client presents incorrect auth token" do
+      let!(:response) do
+        agent.post!("http://localhost:8080/meh",
+                    :headers => {
+                      "content-type" => "text/plain",
+                      "authorization" => "Basic meh"
+                    },
+                    :body => "hi")
+      end
+      it "should respond with 403" do
+        expect(response.status).to eq(403)
+      end
+      it "should not generate an event" do
+        expect(queue).to be_empty
+      end
+    end
+    context "when client presents correct auth token" do
+      let!(:response) do
+        agent.post!("http://localhost:8080/meh",
+                    :headers => {
+                      "content-type" => "text/plain",
+                      "authorization" => "Basic #{auth_token}"
+                    }, :body => "hi")
+      end
+      it "should respond with 200" do
+        expect(response.status).to eq(200)
+      end
+      it "should generate an event" do
+        expect(queue).to_not be_empty
+      end
+    end
+  end
 end
