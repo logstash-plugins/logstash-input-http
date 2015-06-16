@@ -50,6 +50,20 @@ describe LogStash::Inputs::Http do
     end
   end
 
+  context "when using a custom codec mapping" do
+    subject { LogStash::Inputs::Http.new("additional_codecs" => { "application/json" => "plain" }) }
+    it "should decode the message accordingly" do
+      body = { "message" => "Hello" }.to_json
+      subject.register
+      Thread.new { subject.run(queue) }
+      agent.post!("http://localhost:8080/meh.json",
+                  :headers => { "content-type" => "application/json" },
+                  :body => body)
+      event = queue.pop
+      expect(event["message"]).to eq(body)
+    end
+  end
+
   context "with :ssl => false" do
     subject { LogStash::Inputs::Http.new("ssl" => false) }
     it "should not raise exception" do

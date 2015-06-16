@@ -68,9 +68,9 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     end
     @server.min_threads = 0
     @server.max_threads = @threads
-    @codecs = Hash.new(@codec)
+    @codecs = Hash.new
     @additional_codecs.each do |content_type, codec|
-      @codecs[content_type] = LogStash::Plugin.lookup("codec", "json").new
+      @codecs[content_type] = LogStash::Plugin.lookup("codec", codec).new
     end
   end # def register
 
@@ -80,7 +80,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
         REJECTED_HEADERS.each {|k| req.delete(k) }
         req = lowercase_keys(req)
         body = req.delete("rack.input")
-        @codecs[req["content_type"]].decode(body.read) do |event|
+        @codecs.fetch(req["content_type"], @codec).decode(body.read) do |event|
           event["headers"] = req
           decorate(event)
           queue << event
