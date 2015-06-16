@@ -113,8 +113,8 @@ describe LogStash::Inputs::Http do
                     },
                     :body => "hi")
       end
-      it "should respond with 403" do
-        expect(response.status).to eq(403)
+      it "should respond with 401" do
+        expect(response.status).to eq(401)
       end
       it "should not generate an event" do
         expect(queue).to be_empty
