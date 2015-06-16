@@ -83,20 +83,14 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   end # def register
 
   def run(queue)
-    @server.app = lambda do |req|
+
+    # proc needs to be defined at this context
+    # to capture @codecs, @logger and lowercase_keys
+    p = Proc.new do |req|
       begin
         REJECTED_HEADERS.each {|k| req.delete(k) }
         req = lowercase_keys(req)
         body = req.delete("rack.input")
-        if @auth_token
-          if req["http_authorization"] then
-            if req["http_authorization"] != @auth_token
-              return ['403', RESPONSE_HEADERS, []]
-            end
-          else
-            return ['401', RESPONSE_HEADERS, []]
-          end
-        end
         @codecs.fetch(req["content_type"], @codec).decode(body.read) do |event|
           event["headers"] = req
           decorate(event)
@@ -108,8 +102,17 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
         ['500', RESPONSE_HEADERS, ['internal error']]
       end
     end
+
+    auth = Proc.new do |username, password|
+      username == @user && password == @password.value
+    end if (@user && @password)
+
+    @server.app = Rack::Builder.new do
+      use(Rack::Auth::Basic, &auth) if auth
+      run(p)
+    end
     @server.run.join
-  end # def run
+  end
 
   private
   def lowercase_keys(hash)
