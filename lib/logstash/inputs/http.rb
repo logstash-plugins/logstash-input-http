@@ -51,7 +51,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # Password for basic authorization
   config :password, :validate => :password, :required => false
 
-  # SSL Configuration
+  # SSL Configurations
   #
   # Enable SSL
   config :ssl, :validate => :boolean, :default => false
@@ -63,7 +63,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   config :keystore_password, :validate => :password
 
   # Here you can set how to decode specific content-types in the body of the request.
-  # By default the plain codec will be used
+  # By default, the plain codec will be used
   config :additional_codecs, :validate => :hash, :default => { "application/json" => "json" }
 
   # useless headers puma adds to the requests
