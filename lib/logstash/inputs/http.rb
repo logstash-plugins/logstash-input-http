@@ -11,29 +11,47 @@ class Puma::Server
   def normalize_env(env, client); end
 end
 
-# This output opens a web server and listens to HTTP requests,
-# converting them to LogStash::Event instances.
+# Using this input you can receive single or multiline events over http(s).
+# Applications can send a HTTP POST request with a body to the endpoint started by this
+# input and Logstash will convert them into events for subsequent processing. Users 
+# can pass plain text, JSON, or any formatted data and use a corresponding codec with this
+# input. By default, the codec used is plain. 
+#
+# This input can also be used to receive webhook requests to integrate with other services
+# and applications. By taking advantage of the vast plugin ecosystem available in Logstash
+# you can trigger actionable events right from your application.
+# 
+# ==== Security
+# This plugin supports standard HTTP basic authentication headers to identify the requester.
+# You can pass in an username, password combination while sending data to this input
+#
+# You can also setup SSL and send data securely over https, with an option of validating 
+# the client's certificate.
 #
 class LogStash::Inputs::Http < LogStash::Inputs::Base
+  #TODO: config :cacert, :validate => :path
+
   config_name "http"
 
-  # If undefined, Logstash will complain, even if codec is unused.
+  # Codec used to decode the incoming data.
   default :codec, "plain"
 
-  # Which host or ip to bind to
+  # The host or ip to bind
   config :host, :validate => :string, :default => "0.0.0.0"
 
-  # Which TCP port to bind to
+  # The TCP port to bind to
   config :port, :validate => :number, :default => 8080
 
   # Maximum number of threads to use
   config :threads, :validate => :number, :default => 4
 
-  # Basic Auth
+  # Username for basic authorization
   config :user, :validate => :string, :required => false
+
+  # Password for basic authorization
   config :password, :validate => :password, :required => false
 
-  # SSL Configurations
+  # SSL Configuration
   #
   # Enable SSL
   config :ssl, :validate => :boolean, :default => false
@@ -41,13 +59,11 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # The JKS keystore to validate the client's certificates
   config :keystore, :validate => :path
 
-  #TODO: config :cacert, :validate => :path
-
   # Set the truststore password
   config :keystore_password, :validate => :password
 
-  # here you can describe how to decode specific content-types
-  # by default the default codec will be used
+  # Here you can set how to decode specific content-types in the body of the request.
+  # By default the plain codec will be used
   config :additional_codecs, :validate => :hash, :default => { "application/json" => "json" }
 
   # useless headers puma adds to the requests
