@@ -13,9 +13,10 @@ end
 
 # Using this input you can receive single or multiline events over http(s).
 # Applications can send a HTTP POST request with a body to the endpoint started by this
-# input and Logstash will convert them into events for subsequent processing. Users 
+# input and Logstash will convert it into an event for subsequent processing. Users 
 # can pass plain text, JSON, or any formatted data and use a corresponding codec with this
-# input. By default, the codec used is plain. 
+# input. For Content-Type `application/json` the `json` codec is used, but for all other
+# data formats, `plain` codec is used.
 #
 # This input can also be used to receive webhook requests to integrate with other services
 # and applications. By taking advantage of the vast plugin ecosystem available in Logstash
@@ -26,7 +27,9 @@ end
 # You can pass in an username, password combination while sending data to this input
 #
 # You can also setup SSL and send data securely over https, with an option of validating 
-# the client's certificate.
+# the client's certificate. Currently, the certificate setup is through 
+# https://docs.oracle.com/cd/E19509-01/820-3503/ggfen/index.html[Java Keystore 
+# format]
 #
 class LogStash::Inputs::Http < LogStash::Inputs::Base
   #TODO: config :cacert, :validate => :path
