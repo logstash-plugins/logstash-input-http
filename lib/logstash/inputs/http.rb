@@ -38,6 +38,8 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   config_name "http"
 
   # Codec used to decode the incoming data.
+  # This codec will be used as a fall-back if the content-type
+  # is not found in the "additional_codecs" hash
   default :codec, "plain"
 
   # The host or ip to bind
@@ -66,8 +68,9 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # Set the truststore password
   config :keystore_password, :validate => :password
 
-  # Here you can set how to decode specific content-types in the body of the request.
-  # By default, the plain codec will be used
+  # Apply specific codecs for specific content types.
+  # The default codec will be applied only after this list is checked
+  # and no codec for the request's content-type is found
   config :additional_codecs, :validate => :hash, :default => { "application/json" => "json" }
 
   # useless headers puma adds to the requests
