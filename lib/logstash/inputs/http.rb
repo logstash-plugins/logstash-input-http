@@ -111,10 +111,12 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     # to capture @codecs, @logger and lowercase_keys
     p = Proc.new do |req|
       begin
+        remote_host = req['puma.socket'].peeraddr[3]
         REJECTED_HEADERS.each {|k| req.delete(k) }
         req = lowercase_keys(req)
         body = req.delete("rack.input")
         @codecs.fetch(req["content_type"], @codec).decode(body.read) do |event|
+          event["host"] = remote_host
           event["headers"] = req
           decorate(event)
           queue << event

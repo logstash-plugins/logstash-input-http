@@ -18,6 +18,21 @@ describe LogStash::Inputs::Http do
     subject.teardown
   end
 
+  describe "#run" do
+    subject { LogStash::Inputs::Http.new }
+    before :each do
+      subject.register
+      Thread.new { subject.run(queue) }
+    end
+    it "should include remote host in \"host\" property" do
+      agent.post!("http://localhost:8080/meh.json",
+        :headers => { "content-type" => "text/plain" },
+        :body => "hello")
+      event = queue.pop
+      expect(event["host"]).to eq("127.0.0.1")
+    end
+  end
+
   context "with default codec" do
     subject { LogStash::Inputs::Http.new("port" => port) }
     context "when receiving a text/plain request" do
