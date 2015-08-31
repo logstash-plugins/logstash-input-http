@@ -15,7 +15,11 @@ describe LogStash::Inputs::Http do
   let(:port) { rand(5000) + 1025 }
 
   after :each do
-    subject.teardown
+    subject.stop
+  end
+
+  it_behaves_like "an interruptible input plugin" do
+    let(:config) { { "port" => port } }
   end
 
   context "with default codec" do
