@@ -3,6 +3,8 @@ require "logstash/inputs/http"
 require "json"
 require "ftw"
 require "stud/temporary"
+require "zlib"
+require "stringio"
 
 describe LogStash::Inputs::Http do
 
@@ -46,6 +48,32 @@ describe LogStash::Inputs::Http do
         agent.post!("http://localhost:#{port}/meh.json",
                     :headers => { "content-type" => "text/plain" },
                     :body => "hello")
+        event = queue.pop
+        expect(event["message"]).to eq("hello")
+      end
+    end
+    context "when receiving a deflate compressed text/plain request" do
+      it "should process the request normally" do
+        subject.register
+        Thread.new { subject.run(queue) }
+        agent.post!("http://localhost:#{port}/meh.json",
+                    :headers => { "content-type" => "text/plain", "content-encoding" => "deflate" },
+                    :body => Zlib::Deflate.deflate("hello"))
+        event = queue.pop
+        expect(event["message"]).to eq("hello")
+      end
+    end
+    context "when receiving a gzip compressed text/plain request" do
+      it "should process the request normally" do
+        subject.register
+        Thread.new { subject.run(queue) }
+	z = StringIO.new ""
+	w = Zlib::GzipWriter.new z; 
+	w.write("hello"); 
+	w.finish; 
+        agent.post!("http://localhost:#{port}/meh.json",
+                    :headers => { "content-type" => "text/plain", "content-encoding" => "gzip" },
+                    :body => z.string)
         event = queue.pop
         expect(event["message"]).to eq("hello")
       end
