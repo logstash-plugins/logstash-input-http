@@ -81,6 +81,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   public
   def register
+    require "logstash/util/http_compressed_requests"
     @server = ::Puma::Server.new(nil) # we'll set the rack handler later
     if @user && @password then
       token = Base64.strict_encode64("#{@user}:#{@password.value}")
@@ -134,6 +135,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
     @server.app = Rack::Builder.new do
       use(Rack::Auth::Basic, &auth) if auth
+      use CompressedRequests
       run(p)
     end
     @server.run.join
