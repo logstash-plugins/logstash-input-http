@@ -63,6 +63,22 @@ describe LogStash::Inputs::Http do
         expect(event["message"]).to eq("hello")
       end
     end
+    context "when receiving a deflate text/plain request that cannot be decompressed" do
+      let!(:response) do
+        subject.register
+        Thread.new { subject.run(queue) }
+        agent.post!("http://localhost:#{port}/meh.json",
+                    :headers => { "content-type" => "text/plain", "content-encoding" => "deflate" },
+                    :body => "hello")
+      end
+      it "should respond with 400" do
+        expect(response.status).to eq(400)
+      end
+      it "should respond with a decompression error" do
+        event = queue.pop
+        expect(event["message"]).to eq("Inflate decompression failed")
+      end
+    end
     context "when receiving a gzip compressed text/plain request" do
       it "should process the request normally" do
         subject.register
@@ -76,6 +92,22 @@ describe LogStash::Inputs::Http do
                     :body => z.string)
         event = queue.pop
         expect(event["message"]).to eq("hello")
+      end
+    end
+    context "when receiving a gzip text/plain request that cannot be decompressed" do
+      let!(:response) do
+          subject.register
+          Thread.new { subject.run(queue) }
+          agent.post!("http://localhost:#{port}/meh.json",
+                    :headers => { "content-type" => "text/plain", "content-encoding" => "gzip" },
+                    :body => "hello")
+      end
+      it "should respond with 400" do
+        expect(response.status).to eq(400)
+      end
+      it "should respond with a decompression error" do
+        event = queue.pop
+        expect(event["message"]).to eq("Gzip decompression failed")
       end
     end
     context "when receiving an application/json request" do

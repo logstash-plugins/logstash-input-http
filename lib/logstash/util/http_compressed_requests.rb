@@ -21,13 +21,26 @@ class CompressedRequests
     end
 
     status, headers, response = @app.call(env)
+    if extracted =~ /^(Gzip|Inflate) decompression failed$/
+      status = 400
+    end
     return [status, headers, response]
   end
   
   def decode(input, content_encoding)
     case content_encoding
-      when 'gzip' then Zlib::GzipReader.new(input).read
-      when 'deflate' then Zlib::Inflate.inflate(input.read)
+      when 'gzip' then
+        begin
+          Zlib::GzipReader.new(input).read
+        rescue Exception
+          "Gzip decompression failed"
+        end
+      when 'deflate' then
+        begin
+          Zlib::Inflate.inflate(input.read)
+        rescue Exception
+          "Inflate decompression failed"
+        end
     end
   end
 end
