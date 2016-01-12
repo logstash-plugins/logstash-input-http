@@ -32,13 +32,13 @@ class CompressedRequests
       when 'gzip' then
         begin
           Zlib::GzipReader.new(input).read
-        rescue Exception
+        rescue Zlib::Error
           "Gzip decompression failed"
         end
       when 'deflate' then
         begin
           Zlib::Inflate.inflate(input.read)
-        rescue Exception
+        rescue Zlib::Error
           "Inflate decompression failed"
         end
     end
