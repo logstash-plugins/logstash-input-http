@@ -20,9 +20,13 @@ class CompressedRequests
       env['rack.input'] = StringIO.new(extracted)
     end
 
-    status, headers, response = @app.call(env)
     if extracted =~ /^(Gzip|Inflate) decompression failed$/
-      status = 400
+      status = '400'
+      headers = {'Content-Type' => 'text/plain'}
+      response = ['Error: ' + extracted]
+      @app.call(env)
+    else
+      status, headers, response = @app.call(env)
     end
     return [status, headers, response]
   end
