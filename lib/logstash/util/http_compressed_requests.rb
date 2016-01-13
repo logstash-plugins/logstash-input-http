@@ -10,7 +10,7 @@ class CompressedRequests
   def encoding_handled?(env)
     ['gzip', 'deflate'].include? env['HTTP_CONTENT_ENCODING']
   end
-  
+
   def call(env)
     if method_handled?(env) && encoding_handled?(env)
       begin
@@ -26,7 +26,7 @@ class CompressedRequests
 
     @app.call(env)
   end
-  
+
   def decode(input, content_encoding)
     case content_encoding
       when 'gzip' then
