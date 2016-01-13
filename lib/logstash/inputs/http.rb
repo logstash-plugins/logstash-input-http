@@ -116,8 +116,8 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
         req = lowercase_keys(req)
         body = req.delete("rack.input")
         @codecs.fetch(req["content_type"], @codec).decode(body.read) do |event|
-          event["host"] = remote_host
-          event["headers"] = req
+          event["request_from"] = remote_host
+          event["request_headers"] = req
           decorate(event)
           queue << event
         end
