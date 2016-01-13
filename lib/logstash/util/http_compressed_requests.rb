@@ -13,38 +13,32 @@ class CompressedRequests
   
   def call(env)
     if method_handled?(env) && encoding_handled?(env)
-      extracted = decode(env['rack.input'], env['HTTP_CONTENT_ENCODING'])
+      begin
+        extracted = decode(env['rack.input'], env['HTTP_CONTENT_ENCODING'])
+      rescue Zlib::Error
+        return [400, {'Content-Type' => 'text/plain'}, ["Failed to decompress body"]]
+      end
 
       env.delete('HTTP_CONTENT_ENCODING')
       env['CONTENT_LENGTH'] = extracted.bytesize
       env['rack.input'] = StringIO.new(extracted)
     end
 
-    if extracted =~ /^(Gzip|Inflate) decompression failed$/
-      status = '400'
-      headers = {'Content-Type' => 'text/plain'}
-      response = ['Error: ' + extracted]
-      @app.call(env)
-    else
-      status, headers, response = @app.call(env)
-    end
+    status, headers, response = @app.call(env)
     return [status, headers, response]
   end
   
   def decode(input, content_encoding)
-    case content_encoding
-      when 'gzip' then
-        begin
+    begin
+      case content_encoding
+        when 'gzip' then
           Zlib::GzipReader.new(input).read
-        rescue Zlib::Error
-          "Gzip decompression failed"
-        end
-      when 'deflate' then
-        begin
+        when 'deflate' then
           Zlib::Inflate.inflate(input.read)
-        rescue Zlib::Error
-          "Inflate decompression failed"
-        end
+      end
+    rescue Zlib::Error
+      raise
     end
   end
+
 end

@@ -75,7 +75,7 @@ describe LogStash::Inputs::Http do
         expect(response.status).to eq(400)
       end
       it "should respond with a decompression error" do
-        expect(response.read_body).to eq("Error: Inflate decompression failed")
+        expect(response.read_body).to eq("Failed to decompress body")
       end
     end
     context "when receiving a gzip compressed text/plain request" do
@@ -105,7 +105,7 @@ describe LogStash::Inputs::Http do
         expect(response.status).to eq(400)
       end
       it "should respond with a decompression error" do
-        expect(response.read_body).to eq("Error: Gzip decompression failed")
+        expect(response.read_body).to eq("Failed to decompress body")
       end
     end
     context "when receiving an application/json request" do
