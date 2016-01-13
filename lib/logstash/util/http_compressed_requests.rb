@@ -24,20 +24,15 @@ class CompressedRequests
       env['rack.input'] = StringIO.new(extracted)
     end
 
-    status, headers, response = @app.call(env)
-    return [status, headers, response]
+    @app.call(env)
   end
   
   def decode(input, content_encoding)
-    begin
-      case content_encoding
-        when 'gzip' then
-          Zlib::GzipReader.new(input).read
-        when 'deflate' then
-          Zlib::Inflate.inflate(input.read)
-      end
-    rescue Zlib::Error
-      raise
+    case content_encoding
+      when 'gzip' then
+        Zlib::GzipReader.new(input).read
+      when 'deflate' then
+        Zlib::Inflate.inflate(input.read)
     end
   end
 
