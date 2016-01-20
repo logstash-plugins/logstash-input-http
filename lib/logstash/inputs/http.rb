@@ -73,11 +73,12 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # and no codec for the request's content-type is found
   config :additional_codecs, :validate => :hash, :default => { "application/json" => "json" }
 
+  # specify a custom set of response headers
+  config :response_headers, :validate => :hash, :default => { 'Content-Type' => 'text/plain' }
+
   # useless headers puma adds to the requests
   # mostly due to rack compliance
   REJECTED_HEADERS = ["puma.socket", "rack.hijack?", "rack.hijack", "rack.url_scheme", "rack.after_reply", "rack.version", "rack.errors", "rack.multithread", "rack.multiprocess", "rack.run_once", "SCRIPT_NAME", "QUERY_STRING", "SERVER_PROTOCOL", "SERVER_SOFTWARE", "GATEWAY_INTERFACE"]
-
-  RESPONSE_HEADERS = {'Content-Type' => 'text/plain'}
 
   public
   def register
@@ -122,10 +123,10 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
           decorate(event)
           queue << event
         end
-        ['200', RESPONSE_HEADERS, ['ok']]
+        ['200', @response_headers, ['ok']]
       rescue => e
         @logger.error("unable to process event #{req.inspect}. exception => #{e.inspect}")
-        ['500', RESPONSE_HEADERS, ['internal error']]
+        ['500', @response_headers, ['internal error']]
       end
     end
 
