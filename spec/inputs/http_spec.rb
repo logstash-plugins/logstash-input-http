@@ -82,10 +82,10 @@ describe LogStash::Inputs::Http do
       it "should process the request normally" do
         subject.register
         Thread.new { subject.run(queue) }
-	z = StringIO.new ""
-	w = Zlib::GzipWriter.new z; 
-	w.write("hello"); 
-	w.finish; 
+        z = StringIO.new ""
+        w = Zlib::GzipWriter.new z
+        w.write("hello")
+        w.finish
         agent.post!("http://localhost:#{port}/meh.json",
                     :headers => { "content-type" => "text/plain", "content-encoding" => "gzip" },
                     :body => z.string)
@@ -144,6 +144,20 @@ describe LogStash::Inputs::Http do
                   :body => body)
       event = queue.pop
       expect(event["message"]).to eq(body)
+    end
+  end
+
+  context "when using custom headers" do
+    let(:custom_headers) { { 'access-control-allow-origin' => '*' } }
+    subject { LogStash::Inputs::Http.new("port" => port, "response_headers" => custom_headers) }
+
+    describe "the response" do
+      it "should include the custom headers" do
+        subject.register
+        Thread.new { subject.run(queue) }
+        response = agent.post!("http://localhost:#{port}/meh", :body => "hello")
+        expect(response.headers.to_hash).to include(custom_headers)
+      end
     end
   end
 
