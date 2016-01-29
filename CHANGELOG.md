@@ -1,3 +1,6 @@
+## 2.1.1
+ - Support for custom response headers 
+
 ## 2.1.0
  - Support compressed and gziped requests (thanks dwapstra)
 
