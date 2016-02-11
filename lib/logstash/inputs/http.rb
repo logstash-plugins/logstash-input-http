@@ -6,6 +6,7 @@ require "socket" # for Socket.gethostname
 require "puma/server"
 require "puma/minissl"
 require "base64"
+require "rack"
 
 class Puma::Server
   # ensure this method doesn't mess up our vanilla request
