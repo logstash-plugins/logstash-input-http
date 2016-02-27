@@ -69,6 +69,9 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # Set the truststore password
   config :keystore_password, :validate => :password
 
+  # Set the client certificate verification method. Valid methods: none, peer, force_peer
+  config :verify_mode, :validate => ['none', 'peer', 'force_peer'], :default => 'none'
+
   # Apply specific codecs for specific content types.
   # The default codec will be applied only after this list is checked
   # and no codec for the request's content-type is found
@@ -96,6 +99,14 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       ctx = Puma::MiniSSL::Context.new
       ctx.keystore = @keystore
       ctx.keystore_pass = @keystore_password.value
+      ctx.verify_mode = case @verify_mode
+                        when 'peer'
+                          Puma::MiniSSL::VERIFY_PEER
+                        when 'force_peer'
+                          Puma::MiniSSL::VERIFY_PEER | Puma::MiniSSL::VERIFY_FAIL_IF_NO_PEER_CERT
+                        when 'none'
+                          Puma::MiniSSL::VERIFY_NONE
+                        end
       @server.add_ssl_listener(@host, @port, ctx)
     else
       @server.add_tcp_listener(@host, @port)
