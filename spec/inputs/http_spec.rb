@@ -35,7 +35,7 @@ describe LogStash::Inputs::Http do
         :headers => { "content-type" => "text/plain" },
         :body => "hello")
       event = queue.pop
-      expect(event["host"]).to eq("127.0.0.1")
+      expect(event.get("host")).to eq("127.0.0.1")
     end
   end
 
@@ -49,7 +49,7 @@ describe LogStash::Inputs::Http do
                     :headers => { "content-type" => "text/plain" },
                     :body => "hello")
         event = queue.pop
-        expect(event["message"]).to eq("hello")
+        expect(event.get("message")).to eq("hello")
       end
     end
     context "when receiving a deflate compressed text/plain request" do
@@ -60,7 +60,7 @@ describe LogStash::Inputs::Http do
                     :headers => { "content-type" => "text/plain", "content-encoding" => "deflate" },
                     :body => Zlib::Deflate.deflate("hello"))
         event = queue.pop
-        expect(event["message"]).to eq("hello")
+        expect(event.get("message")).to eq("hello")
       end
     end
     context "when receiving a deflate text/plain request that cannot be decompressed" do
@@ -90,7 +90,7 @@ describe LogStash::Inputs::Http do
                     :headers => { "content-type" => "text/plain", "content-encoding" => "gzip" },
                     :body => z.string)
         event = queue.pop
-        expect(event["message"]).to eq("hello")
+        expect(event.get("message")).to eq("hello")
       end
     end
     context "when receiving a gzip text/plain request that cannot be decompressed" do
@@ -116,7 +116,7 @@ describe LogStash::Inputs::Http do
                     :headers => { "content-type" => "application/json" },
                     :body => { "message_body" => "Hello" }.to_json)
         event = queue.pop
-        expect(event["message_body"]).to eq("Hello")
+        expect(event.get("message_body")).to eq("Hello")
       end
     end
   end
@@ -128,7 +128,7 @@ describe LogStash::Inputs::Http do
       Thread.new { subject.run(queue) }
       agent.post!("http://localhost:#{port}/meh.json", :body => { "message" => "Hello" }.to_json)
       event = queue.pop
-      expect(event["message"]).to eq("Hello")
+      expect(event.get("message")).to eq("Hello")
     end
   end
 
@@ -143,7 +143,7 @@ describe LogStash::Inputs::Http do
                   :headers => { "content-type" => "application/json" },
                   :body => body)
       event = queue.pop
-      expect(event["message"]).to eq(body)
+      expect(event.get("message")).to eq(body)
     end
   end
 
