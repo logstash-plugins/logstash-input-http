@@ -1,3 +1,5 @@
+## 3.0.2
+  - Use a new class as redefined Puma::Server class as we need to mock one method and only need it for this plugin, but not for all parts using puma in logstash.Fixes https://github.com/logstash-plugins/logstash-input-http/issues/51.
 ## 3.0.1
   - Republish all the gems under jruby.
 ## 3.0.0
