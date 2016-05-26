@@ -8,7 +8,15 @@ require "puma/minissl"
 require "base64"
 require "rack"
 
-class Puma::Server
+
+##
+# We keep the redefined method in a new http server class, this is because
+# in other parts of logstash we might be using puma as webserver, for example
+# in the sinatra part we need thie method to actually return the REQUEST_PATH, 
+# so it can actually infer the right resource to use.
+# Fixes https://github.com/logstash-plugins/logstash-input-http/issues/51
+##
+class HTTPPumaServer < Puma::Server
   # ensure this method doesn't mess up our vanilla request
   def normalize_env(env, client); end
 end
@@ -87,7 +95,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   public
   def register
     require "logstash/util/http_compressed_requests"
-    @server = ::Puma::Server.new(nil) # we'll set the rack handler later
+    @server = ::HTTPPumaServer.new(nil) # we'll set the rack handler later
     if @user && @password then
       token = Base64.strict_encode64("#{@user}:#{@password.value}")
       @auth_token = "Basic #{token}"
