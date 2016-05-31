@@ -1,6 +1,8 @@
 ## 3.0.2
   - Use a new class as redefined Puma::Server class as we need to mock one method and only need it for this plugin, but not for all parts using puma in logstash.Fixes https://github.com/logstash-plugins/logstash-input-http/issues/51.
 ## 3.0.1
+  - Update Puma version to match LS core (~> 3.4.0).
+## 3.0.1
   - Republish all the gems under jruby.
 ## 3.0.0
   - Update the plugin to the version 2.0 of the plugin api, this change is required for Logstash 5.0 compatibility. See https://github.com/elastic/logstash/issues/5141
