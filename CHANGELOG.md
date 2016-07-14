@@ -1,3 +1,6 @@
+## 3.0.3
+  - Relax constraint on logstash-core-plugin-api to >= 1.60 <= 2.99
+
 ## 3.0.2
   - Use a new class as redefined Puma::Server class as we need to mock one method and only need it for this plugin, but not for all parts using puma in logstash.Fixes https://github.com/logstash-plugins/logstash-input-http/issues/51.
 ## 3.0.1
