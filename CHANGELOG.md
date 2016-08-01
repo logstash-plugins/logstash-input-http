@@ -1,3 +1,6 @@
+## 3.1.0
+  - Add metrics for events and errors happening during execution time.
+
 ## 3.0.3
   - Relax constraint on logstash-core-plugin-api to >= 1.60 <= 2.99
 

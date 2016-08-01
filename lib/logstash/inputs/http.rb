@@ -94,6 +94,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   public
   def register
+    @metric_errors = metric.namespace(:errors)
     require "logstash/util/http_compressed_requests"
     @server = ::HTTPInputWebServer.new(nil) # we'll set the rack handler later
     if @user && @password then
@@ -142,10 +143,12 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
           event.set("headers", req)
           decorate(event)
           queue << event
+          metric.increment(:events)
         end
         ['200', @response_headers, ['ok']]
       rescue => e
         @logger.error("unable to process event #{req.inspect}. exception => #{e.inspect}")
+        @metric_errors.increment(:internal_errors)
         ['500', @response_headers, ['internal error']]
       end
     end
