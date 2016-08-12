@@ -16,7 +16,7 @@ class CompressedRequests
       begin
         extracted = decode(env['rack.input'], env['HTTP_CONTENT_ENCODING'])
       rescue Zlib::Error
-        return [@response_deflate_status, @response_headers, [@response_deflate_message]]
+        return [@response_deflate_status, {'Content-Type' => 'text/plain'}, [@response_deflate_message]]
       end
 
       env.delete('HTTP_CONTENT_ENCODING')
