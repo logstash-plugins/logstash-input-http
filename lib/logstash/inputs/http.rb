@@ -102,12 +102,6 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # http response message for general error
   config :response_err_message, :validate => :string, :default => 'internal error'
 
-  # http response code for decompression error
-  config :response_deflate_status, :validate => :number, :default => 400
-
-  # http response message for decompression error
-  config :response_deflate_message, :validate => :string, :default => 'Failed to decompress body'
-
   # useless headers puma adds to the requests
   # mostly due to rack compliance
   REJECTED_HEADERS = ["puma.socket", "rack.hijack?", "rack.hijack", "rack.url_scheme", "rack.after_reply", "rack.version", "rack.errors", "rack.multithread", "rack.multiprocess", "rack.run_once", "SCRIPT_NAME", "QUERY_STRING", "SERVER_PROTOCOL", "SERVER_SOFTWARE", "GATEWAY_INTERFACE"]
