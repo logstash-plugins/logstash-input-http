@@ -106,7 +106,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   config :response_deflate_status, :validate => :number, :default => 400
 
   # http response message for decompression error
-  config :response_deflate_message, :validate => :string, :default => 'failed to decompress body'
+  config :response_deflate_message, :validate => :string, :default => 'Failed to decompress body'
 
   # useless headers puma adds to the requests
   # mostly due to rack compliance
