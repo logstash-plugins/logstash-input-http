@@ -88,6 +88,26 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # specify a custom set of response headers
   config :response_headers, :validate => :hash, :default => { 'Content-Type' => 'text/plain' }
 
+  # HTTP Response Configurations
+  #
+  # http response code for success
+  config :response_ok_status, :validate => :number, :default => 200
+
+  # http response message for success
+  config :response_ok_message, :validate => :string, :default => 'ok'
+
+  # http response code for general error
+  config :response_err_status, :validate => :number, :default => 500
+
+  # http response message for general error
+  config :response_err_message, :validate => :string, :default => 'internal error'
+
+  # http response code for decompression error
+  config :response_deflate_status, :validate => :number, :default => 400
+
+  # http response message for decompression error
+  config :response_deflate_message, :validate => :string, :default => 'failed to decompress body'
+
   # useless headers puma adds to the requests
   # mostly due to rack compliance
   REJECTED_HEADERS = ["puma.socket", "rack.hijack?", "rack.hijack", "rack.url_scheme", "rack.after_reply", "rack.version", "rack.errors", "rack.multithread", "rack.multiprocess", "rack.run_once", "SCRIPT_NAME", "QUERY_STRING", "SERVER_PROTOCOL", "SERVER_SOFTWARE", "GATEWAY_INTERFACE"]
@@ -143,10 +163,10 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
           decorate(event)
           queue << event
         end
-        ['200', @response_headers, ['ok']]
+        [@response_ok_status, @response_headers, [@response_ok_message]]
       rescue => e
         @logger.error("unable to process event #{req.inspect}. exception => #{e.inspect}")
-        ['500', @response_headers, ['internal error']]
+        [@response_err_status, @response_headers, [@response_err_message]]
       end
     end
 
