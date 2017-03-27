@@ -145,7 +145,13 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
         end
         ['200', @response_headers, ['ok']]
       rescue => e
-        @logger.error("unable to process event #{req.inspect}. exception => #{e.inspect}")
+        @logger.error(
+          "unable to process event.", 
+          :request => req,
+          :message => e.message,
+          :class => e.class.name,
+          :backtrace => e.backtrace
+        )
         ['500', @response_headers, ['internal error']]
       end
     end
