@@ -20,14 +20,8 @@ include::{include_path}/plugin_header.asciidoc[]
 
 ==== Description
 
-We keep the redefined method in a new http server class, this is because
-in other parts of logstash we might be using puma as webserver, for example
-in the sinatra part we need this method to actually return the REQUEST_PATH, 
-so it can actually infer the right resource to use.
-Fixes https://github.com/logstash-plugins/logstash-input-http/issues/51
-ensure this method doesn't mess up our vanilla request
 Using this input you can receive single or multiline events over http(s).
-Applications can send a HTTP POST request with a body to the endpoint started by this
+Applications can send an HTTP POST request with a body to the endpoint started by this
 input and Logstash will convert it into an event for subsequent processing. Users 
 can pass plain text, JSON, or any formatted data and use a corresponding codec with this
 input. For Content-Type `application/json` the `json` codec is used, but for all other
@@ -39,7 +33,7 @@ you can trigger actionable events right from your application.
 
 ==== Security
 This plugin supports standard HTTP basic authentication headers to identify the requester.
-You can pass in an username, password combination while sending data to this input
+You can pass in a username, password combination while sending data to this input
 
 You can also setup SSL and send data securely over https, with an option of validating 
 the client's certificate. Currently, the certificate setup is through 
