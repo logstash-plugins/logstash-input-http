@@ -184,6 +184,22 @@ Persistent Queue for the logstash pipeline.
 
 specify a custom set of response headers
 
+[id="plugins-{type}s-{plugin}-remote_host_target_field"]
+===== `remote_host_target_field` 
+
+  * Value type is <<string,string>>
+  * Default value is `"host"`
+
+specify a target field for the client host of the http request
+
+[id="plugins-{type}s-{plugin}-request_headers_target_field"]
+===== `request_headers_target_field` 
+
+  * Value type is <<string,string>>
+  * Default value is `"headers"`
+
+specify target field for the client host of the http request
+
 [id="plugins-{type}s-{plugin}-ssl"]
 ===== `ssl` 
 

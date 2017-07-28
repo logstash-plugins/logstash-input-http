@@ -103,6 +103,12 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # specify a custom set of response headers
   config :response_headers, :validate => :hash, :default => { 'Content-Type' => 'text/plain' }
 
+  # target field for the client host of the http request
+  config :remote_host_target_field, :validate => :string, :default => "host"
+
+  # target field for the client host of the http request
+  config :request_headers_target_field, :validate => :string, :default => "headers"
+
   config :threads, :validate => :number, :required => false, :default => ::LogStash::Config::CpuCoreStrategy.maximum
 
   config :max_pending_requests, :validate => :number, :required => false, :default => 200
@@ -170,8 +176,8 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   end
 
   def push_decoded_event(headers, remote_address, event)
-    event.set("headers", headers)
-    event.set("host", remote_address)
+    event.set(@request_headers_target_field, headers)
+    event.set(@remote_host_target_field, remote_address)
     decorate(event)
     @queue << event
   end
