@@ -88,6 +88,12 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # specify a custom set of response headers
   config :response_headers, :validate => :hash, :default => { 'Content-Type' => 'text/plain' }
 
+  # target field for the client host of the http request
+  config :remote_host_target_field, :validate => :string, :default => "host"
+
+  # target field for the client host of the http request
+  config :request_headers_target_field, :validate => :string, :default => "headers"
+
   # useless headers puma adds to the requests
   # mostly due to rack compliance
   REJECTED_HEADERS = ["puma.socket", "rack.hijack?", "rack.hijack", "rack.url_scheme", "rack.after_reply", "rack.version", "rack.errors", "rack.multithread", "rack.multiprocess", "rack.run_once", "SCRIPT_NAME", "QUERY_STRING", "SERVER_PROTOCOL", "SERVER_SOFTWARE", "GATEWAY_INTERFACE"]
@@ -138,8 +144,8 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
         req = lowercase_keys(req)
         body = req.delete("rack.input")
         @codecs.fetch(req["content_type"], @codec).decode(body.read) do |event|
-          event.set("host", remote_host)
-          event.set("headers", req)
+          event.set(@remote_host_target_field, remote_host)
+          event.set(@request_headers_target_field, req)
           decorate(event)
           queue << event
         end
