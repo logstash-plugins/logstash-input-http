@@ -1,3 +1,6 @@
+## 3.0.6
+  - Fix some documentation issues
+
 ## 3.0.4
   - Improve error logging to log more details, including stack trace, for true bugs.
     This makes debugging broken codecs much easier.
