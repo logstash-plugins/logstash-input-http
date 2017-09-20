@@ -25,19 +25,60 @@ describe LogStash::Inputs::Http do
   end
 
   describe "request handling" do
-    subject { LogStash::Inputs::Http.new }
+    subject { LogStash::Inputs::Http.new(config) }
+
     before :each do
       subject.register
       t = Thread.new { subject.run(queue) }
       sleep 0.01 until subject.instance_variable_get(:@server).running == 0
     end
 
-    it "should include remote host in \"host\" property" do
-      agent.post!("http://localhost:8080/meh.json",
-                  :headers => { "content-type" => "text/plain" },
-                  :body => "hello")
-      event = queue.pop
-      expect(event.get("host")).to eq("127.0.0.1")
+    describe "remote host" do
+      context "by default" do
+        let(:config) { {} }
+        it "is written to the \"host\" field" do
+          agent.post!("http://localhost:8080/meh.json",
+                      :headers => { "content-type" => "text/plain" },
+                      :body => "hello")
+          event = queue.pop
+          expect(event.get("host")).to eq("127.0.0.1")
+        end
+      end
+      context "when using remote_host_target_field" do
+        let(:config) { { "remote_host_target_field" => "remote_host" } }
+        it "is written to the value of \"remote_host_target_field\" property" do
+          agent.post!("http://localhost:8080/meh.json",
+                      :headers => { "content-type" => "text/plain" },
+                      :body => "hello")
+          event = queue.pop
+          expect(event.get("remote_host")).to eq("127.0.0.1")
+        end
+      end
+    end
+
+    describe "request headers" do
+      context "by default" do
+        let(:config) { {} }
+        it "are written to the \"headers\" field" do
+          agent.post!("http://localhost:8080/meh.json",
+                      :headers => { "content-type" => "text/plain" },
+                      :body => "hello")
+          event = queue.pop
+          expect(event.get("headers")).to be_a(Hash)
+          expect(event.get("headers")).to include("request_method" => "POST")
+        end
+      end
+      context "when using request_headers_target_field" do
+        let(:config) { { "request_headers_target_field" => "request_headers" } }
+        it "are written to the field set in \"request_headers_target_field\"" do
+          agent.post!("http://localhost:8080/meh.json",
+                      :headers => { "content-type" => "text/plain" },
+                      :body => "hello")
+          event = queue.pop
+          expect(event.get("request_headers")).to be_a(Hash)
+          expect(event.get("request_headers")).to include("request_method" => "POST")
+        end
+      end
     end
 
     context "with default codec" do

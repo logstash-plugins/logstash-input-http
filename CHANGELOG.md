@@ -1,3 +1,6 @@
+## 3.1.0
+  - adds `request_headers_target_field` and `remote_host_target_field` configuration options with defaults to `host` and `headers` respectively
+
 ## 3.0.6
   - Fix some documentation issues
 
