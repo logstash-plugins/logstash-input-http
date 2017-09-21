@@ -7,7 +7,7 @@ require "puma/server"
 require "puma/minissl"
 require "base64"
 require "rack"
-
+require "java"
 
 ##
 # We keep the redefined method in a new http server class, this is because
@@ -125,6 +125,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     @additional_codecs.each do |content_type, codec|
       @codecs[content_type] = LogStash::Plugin.lookup("codec", codec).new
     end
+    @codec_lock = java.util.concurrent.locks.ReentrantLock.new
   end # def register
 
   def run(queue)
@@ -137,11 +138,16 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
         REJECTED_HEADERS.each {|k| req.delete(k) }
         req = lowercase_keys(req)
         body = req.delete("rack.input")
-        @codecs.fetch(req["content_type"], @codec).decode(body.read) do |event|
-          event.set("host", remote_host)
-          event.set("headers", req)
-          decorate(event)
-          queue << event
+        @codec_lock.lock
+        begin
+          @codecs.fetch(req["content_type"], @codec).decode(body.read) do |event|
+            event.set("host", remote_host)
+            event.set("headers", req)
+            decorate(event)
+            queue << event
+          end
+        ensure
+          @codec_lock.unlock
         end
         ['200', @response_headers, ['ok']]
       rescue => e
