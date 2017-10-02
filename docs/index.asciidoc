@@ -83,9 +83,6 @@ and no codec for the request's content-type is found
   * Value type is <<string,string>>
   * Default value is `"0.0.0.0"`
 
-Codec used to decode the incoming data.
-This codec will be used as a fall-back if the content-type
-is not found in the "additional_codecs" hash
 The host or ip to bind
 
 [id="plugins-{type}s-{plugin}-keystore"]
