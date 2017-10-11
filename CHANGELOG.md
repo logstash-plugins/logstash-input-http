@@ -1,3 +1,8 @@
+## 3.1.0
+  - Replace Puma web server with Netty
+  - Support crt/key certificates
+  - Deprecates jks support
+
 ## 3.0.10
   - Docs: Set the default_codec doc attribute.
 
