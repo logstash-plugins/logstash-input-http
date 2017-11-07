@@ -1,3 +1,6 @@
+## 3.0.7
+  - Update gemspec summary
+
 ## 3.0.6
   - Fix some documentation issues
 
