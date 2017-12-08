@@ -31,6 +31,19 @@ This input can also be used to receive webhook requests to integrate with other 
 and applications. By taking advantage of the vast plugin ecosystem available in Logstash
 you can trigger actionable events right from your application.
 
+==== Blocking Behavior
+
+The HTTP protocol doesn't deal well with long running requests. This plugin will either return 
+a 429 (busy) error when Logstash is backlogged, or it will time out the request. 
+
+If a 429 error is encountered clients should sleep, backing off exponentially with some random 
+jitter, then retry their request.
+
+This plugin will block if the Logstash queue is blocked and there are available HTTP input threads.
+This will cause most HTTP clients to time out. Sent events will still be processed in this case. This
+behavior is not optimal and will be changed in a future release. In the future, this plugin will always 
+return a 429 if the queue is busy, and will not time out in the event of a busy queue. 
+
 ==== Security
 This plugin supports standard HTTP basic authentication headers to identify the requester.
 You can pass in a username, password combination while sending data to this input
