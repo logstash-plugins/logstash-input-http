@@ -120,16 +120,24 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       @server.add_tcp_listener(@host, @port)
     end
     @server.min_threads = 0
-    @server.max_threads = @threads
+    # The actual number of threads is one higher to let us reject additional requests
+    @server.max_threads = @threads + 1
     @codecs = Hash.new
+
     @additional_codecs.each do |content_type, codec|
       @codecs[content_type] = LogStash::Plugin.lookup("codec", codec).new
     end
-    @codec_lock = java.util.concurrent.locks.ReentrantLock.new
+
+    @write_slots = java.util.concurrent.ArrayBlockingQueue.new(threads)
+    threads.times do
+      # Freeze these guys just in case, since they aren't threadsafe
+      @write_slots.put(Hash[@codecs.map {|k,v| [k.freeze, v.clone].freeze }.freeze].freeze)
+    end
+
   end # def register
 
+  BUSY_RESPONSE = ['Server busy, please retry request later'.freeze].freeze
   def run(queue)
-
     # proc needs to be defined at this context
     # to capture @codecs, @logger and lowercase_keys
     p = Proc.new do |req|
@@ -138,16 +146,20 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
         REJECTED_HEADERS.each {|k| req.delete(k) }
         req = lowercase_keys(req)
         body = req.delete("rack.input")
-        @codec_lock.lock
+        local_codecs = @write_slots.poll()
+        if !local_codecs # No free write slot
+          next [429, {}, BUSY_RESPONSE]
+        end
         begin
-          @codecs.fetch(req["content_type"], @codec).decode(body.read) do |event|
+          codec = local_codecs.fetch(req["content_type"], @codec)
+          codec.decode(body.read) do |event|
             event.set("host", remote_host)
             event.set("headers", req)
             decorate(event)
             queue << event
           end
         ensure
-          @codec_lock.unlock
+          @write_slots.put(local_codecs)
         end
         ['200', @response_headers, ['ok']]
       rescue => e

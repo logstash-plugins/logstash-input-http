@@ -1,3 +1,6 @@
+## 3.0.8
+  - In the event that all webserver threads are busy this plugin will now return a 429, busy, error.
+
 ## 3.0.7
   - Update gemspec summary
 

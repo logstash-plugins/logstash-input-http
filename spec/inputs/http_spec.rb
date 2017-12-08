@@ -25,11 +25,37 @@ describe LogStash::Inputs::Http do
   end
 
   describe "request handling" do
-    subject { LogStash::Inputs::Http.new }
+    subject { LogStash::Inputs::Http.new() }
     before :each do
       subject.register
       t = Thread.new { subject.run(queue) }
       sleep 0.01 until subject.instance_variable_get(:@server).running == 0
+    end
+
+    describe "handling overflowing requests with a 429" do
+      let(:queue) { SizedQueue.new(1) }
+      let(:options) { { "threads" => 2 } }
+
+      def do_post
+        FTW::Agent.new.post!("http://localhost:8080/meh.json",
+            :headers => { "content-type" => "text/plain" },
+            :body => "hello")
+      end
+
+      context "when sending more requests than than queue slots" do
+        it "should block when the queue is full" do
+          threads = (subject.threads+5).times.map do # Add one request to the queue then fill the two slots
+            Thread.new { do_post } # These threads should block
+          end
+
+          expect(do_post.status).to eq(429)
+
+          Thread.new do
+            while queue.pop
+            end
+          end
+        end
+      end
     end
 
     it "should include remote host in \"host\" property" do
