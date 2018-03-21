@@ -122,7 +122,9 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     @server.min_threads = 0
     # The actual number of threads is one higher to let us reject additional requests
     @server.max_threads = @threads + 1
-    @codecs = Hash.new
+
+    # set the default codec in the @codecs hash so that it is also cloned in the write_slots
+    @codecs = { :default => @codec }
 
     @additional_codecs.each do |content_type, codec|
       @codecs[content_type] = LogStash::Plugin.lookup("codec", codec).new
@@ -151,7 +153,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
           next [429, {}, BUSY_RESPONSE]
         end
         begin
-          codec = local_codecs.fetch(req["content_type"], @codec)
+          codec = local_codecs[req["content_type"]] || local_codecs[:default]
           codec.decode(body.read) do |event|
             event.set("host", remote_host)
             event.set("headers", req)
