@@ -1,3 +1,7 @@
+## 3.0.9
+  - Make sure default codec is also cloned for thread safety. https://github.com/logstash-plugins/logstash-input-http/pull/80
+  - Always flush codec after each request and codec decoding. https://github.com/logstash-plugins/logstash-input-http/pull/81
+
 ## 3.0.8
   - In the event that all webserver threads are busy this plugin will now return a 429, busy, error.
 
