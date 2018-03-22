@@ -136,12 +136,27 @@ describe LogStash::Inputs::Http do
         end
       end
     end
+
     context "with json codec" do
       subject { LogStash::Inputs::Http.new("port" => port, "codec" => "json") }
       it "should parse the json body" do
         agent.post!("http://localhost:#{port}/meh.json", :body => { "message" => "Hello" }.to_json)
         event = queue.pop
         expect(event.get("message")).to eq("Hello")
+      end
+    end
+
+    context "with json_lines codec without final delimiter" do
+      subject { LogStash::Inputs::Http.new("port" => port, "codec" => "line") }
+      let(:line1) { "foo" }
+      let(:line2) { "bar" }
+      it "should parse all json_lines in body including last one" do
+        agent.post!("http://localhost:#{port}/meh.json", :body => "#{line1}\n#{line2}")
+        expect(queue.size).to eq(2)
+        event = queue.pop
+        expect(event.get("message")).to eq("foo")
+        event = queue.pop
+        expect(event.get("message")).to eq("bar")
       end
     end
 

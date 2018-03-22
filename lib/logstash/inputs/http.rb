@@ -92,7 +92,6 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # mostly due to rack compliance
   REJECTED_HEADERS = ["puma.socket", "rack.hijack?", "rack.hijack", "rack.url_scheme", "rack.after_reply", "rack.version", "rack.errors", "rack.multithread", "rack.multiprocess", "rack.run_once", "SCRIPT_NAME", "QUERY_STRING", "SERVER_PROTOCOL", "SERVER_SOFTWARE", "GATEWAY_INTERFACE"]
 
-  public
   def register
     require "logstash/util/http_compressed_requests"
     @server = ::HTTPInputWebServer.new(nil) # we'll set the rack handler later
@@ -154,12 +153,12 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
         end
         begin
           codec = local_codecs[req["content_type"]] || local_codecs[:default]
-          codec.decode(body.read) do |event|
-            event.set("host", remote_host)
-            event.set("headers", req)
-            decorate(event)
-            queue << event
-          end
+
+          codec.decode(body.read) { |event| push_decorated_event(queue, event, remote_host, req) }
+
+          # since payloads are self-contained and we don't handle multipart we should flush
+          # the codec after each request.
+          codec.flush { |event| push_decorated_event(queue, event, remote_host, req) }
         ensure
           @write_slots.put(local_codecs)
         end
@@ -188,7 +187,16 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     @server.run.join
   end
 
+  def stop
+    return unless @server
+    @server.stop(true)
+    @server.binder.close if @server.binder
+  rescue IOError
+    # do nothing
+  end
+
   private
+
   def lowercase_keys(hash)
     new_hash = {}
     hash.each_pair do |k,v|
@@ -197,13 +205,11 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     new_hash
   end
 
-  public
-  def stop
-    return unless @server
-    @server.stop(true)
-    @server.binder.close if @server.binder
-  rescue IOError
-    # do nothing
+  def push_decorated_event(queue, event, host, headers)
+    event.set("host", host)
+    event.set("headers", headers)
+    decorate(event)
+    queue << event
   end
 
 end # class LogStash::Inputs::Http
