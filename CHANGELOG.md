@@ -1,3 +1,6 @@
+## 3.0.10
+  - Docs: Set the default_codec doc attribute.
+
 ## 3.0.9
   - Make sure default codec is also cloned for thread safety. https://github.com/logstash-plugins/logstash-input-http/pull/80
   - Always flush codec after each request and codec decoding. https://github.com/logstash-plugins/logstash-input-http/pull/81

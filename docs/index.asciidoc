@@ -1,5 +1,6 @@
 :plugin: http
 :type: input
+:default_codec: plain
 
 ///////////////////////////////////////////
 START - GENERATED VARIABLES, DO NOT EDIT!
@@ -176,3 +177,5 @@ Set the client certificate verification method. Valid methods: none, peer, force
 
 [id="plugins-{type}s-{plugin}-common-options"]
 include::{include_path}/{type}.asciidoc[]
+
+:default_codec!:
