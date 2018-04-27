@@ -6,7 +6,6 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.netty.handler.codec.http.HttpVersion;
 import org.logstash.plugins.inputs.http.util.RejectableRunnable;
 
 public class MessageProcessor implements RejectableRunnable {
@@ -25,7 +24,7 @@ public class MessageProcessor implements RejectableRunnable {
 
     public void onRejection() {
         try {
-            final DefaultHttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.TOO_MANY_REQUESTS);
+            final DefaultHttpResponse response = new DefaultHttpResponse(req.protocolVersion(), HttpResponseStatus.TOO_MANY_REQUESTS);
             response.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);
             ctx.writeAndFlush(response);
         } finally {

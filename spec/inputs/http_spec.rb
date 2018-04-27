@@ -197,7 +197,7 @@ describe LogStash::Inputs::Http do
 
       describe "the response" do
         it "should include the custom headers" do
-          response = client.post("http://127.0.0.1:#{port}/meh", :body => "hello")
+          response = client.post("http://127.0.0.1:#{port}/meh", :body => "hello").call
           expect(response.headers.to_hash).to include(custom_headers)
         end
       end
@@ -248,6 +248,32 @@ describe LogStash::Inputs::Http do
       end
     end
 
+    describe "HTTP Protocol Handling" do
+      context "when an HTTP1.1 request is made" do
+        let(:protocol_version) do
+          Java::OrgApacheHttp::HttpVersion::HTTP_1_1
+        end
+        it "responds with a HTTP1.1 response" do
+          response = client.post("http://127.0.0.1:#{port}", :body => "hello")
+          response.request.set_protocol_version(protocol_version)
+          response.call
+          response_protocol_version = response.instance_variable_get(:@response).get_protocol_version
+          expect(response_protocol_version).to eq(protocol_version)
+        end
+      end
+      context "when an HTTP1.0 request is made" do
+        let(:protocol_version) do
+          Java::OrgApacheHttp::HttpVersion::HTTP_1_0
+        end
+        it "responds with a HTTP1.0 response" do
+          response = client.post("http://127.0.0.1:#{port}", :body => "hello")
+          response.request.set_protocol_version(protocol_version)
+          response.call
+          response_protocol_version = response.instance_variable_get(:@response).get_protocol_version
+          expect(response_protocol_version).to eq(protocol_version)
+        end
+      end
+    end
   end
 
   context "with :ssl => false" do
