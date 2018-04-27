@@ -27,14 +27,14 @@ module LogStash module Inputs class Http
       else
         status, headers, content = 401, {}, 'failed to authenticate'
       end
-      generate_response(status, headers, content)
+      generate_response(status, message.get_protocol_version, headers, content)
     end
 
     private
-    def generate_response(status, headers, content)
+    def generate_response(status, version, headers, content)
       payload = Unpooled.copiedBuffer(content.to_java_string, CharsetUtil::UTF_8)
       response = DefaultFullHttpResponse.new(
-        HttpVersion::HTTP_1_1,
+        version,
         HttpResponseStatus.valueOf(status),
         payload)
       response.headers().set(HttpHeaderNames::CONTENT_LENGTH, payload.readable_bytes());
