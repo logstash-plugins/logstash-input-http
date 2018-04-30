@@ -1,9 +1,9 @@
 package org.logstash.plugins.inputs.http;
 
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import java.util.Map;
 
 /**
  * This class is implemented in ruby in `lib/logstash/inputs/http/message_listener`,
@@ -19,15 +19,26 @@ public class MessageHandler implements IMessageHandler {
      * and should be executed in the ruby world.
      *
      * @param remoteAddress
-     * @param message
+     * @param headers
+     * @param body
      */
-    public FullHttpResponse onNewMessage(String remoteAddress, FullHttpRequest message) {
+    public boolean onNewMessage(String remoteAddress, Map<String,String> headers, String body) {
         logger.debug("onNewMessage");
-        return null;
+        return false;
     }
 
     public MessageHandler copy() {
         logger.debug("copy");
         return new MessageHandler();
+    }
+
+    public boolean validatesToken(String token) {
+        logger.debug("validatesToken");
+        return false;
+    }
+
+    public Map<String, String> responseHeaders() {
+        logger.debug("responseHeaders");
+        return null;
     }
 }
