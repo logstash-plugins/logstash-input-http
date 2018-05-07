@@ -60,7 +60,7 @@ public class MessageProcessor implements RejectableRunnable {
 
     private FullHttpResponse processMessage() {
         final Map<String, String> formattedHeaders = formatHeaders(req.headers());
-        final String body = readBytes(req.content());
+        final String body = req.content().toString(charset);
         if (messageHandler.onNewMessage(remoteAddress, formattedHeaders, body)) {
             return generateResponse(messageHandler.responseHeaders());
         } else {
@@ -91,13 +91,6 @@ public class MessageProcessor implements RejectableRunnable {
         response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
 
         return response;
-    }
-
-
-    private String readBytes(ByteBuf buf) {
-        final byte[] bytes = new byte[buf.readableBytes()];
-        buf.getBytes(0, bytes);
-        return new String(bytes, charset);
     }
 
     private Map<String,String>formatHeaders(HttpHeaders headers) {
