@@ -24,7 +24,7 @@ public class MessageProcessor implements RejectableRunnable {
     private final IMessageHandler messageHandler;
     private static final Charset charset = Charset.forName("UTF-8");
 
-    public MessageProcessor(ChannelHandlerContext ctx, FullHttpRequest req, String remoteAddress,
+    MessageProcessor(ChannelHandlerContext ctx, FullHttpRequest req, String remoteAddress,
                             IMessageHandler messageHandler) {
         this.ctx = ctx;
         this.req = req;
@@ -46,20 +46,25 @@ public class MessageProcessor implements RejectableRunnable {
         try {
             final HttpResponse response;
             final String token = req.headers().get(HttpHeaderNames.AUTHORIZATION);
+            req.headers().remove(HttpHeaderNames.AUTHORIZATION);
             if (messageHandler.validatesToken(token)) {
-                final Map<String, String> formattedHeaders = formatHeaders(req.headers());
-                final String body = readBytes(req.content());
-                if (messageHandler.onNewMessage(remoteAddress, formattedHeaders, body)) {
-                    response = generateResponse(messageHandler.responseHeaders());
-                } else {
-                    response = generateFailedResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR);
-                }
+                response = processMessage();
             } else {
                 response = generateFailedResponse(HttpResponseStatus.UNAUTHORIZED);
             }
             ctx.writeAndFlush(response);
         } finally {
             req.release();
+        }
+    }
+
+    private FullHttpResponse processMessage() {
+        final Map<String, String> formattedHeaders = formatHeaders(req.headers());
+        final String body = readBytes(req.content());
+        if (messageHandler.onNewMessage(remoteAddress, formattedHeaders, body)) {
+            return generateResponse(messageHandler.responseHeaders());
+        } else {
+            return generateFailedResponse(HttpResponseStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
