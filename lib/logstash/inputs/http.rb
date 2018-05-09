@@ -160,6 +160,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     http_full_request.headers.each do |header|
       headers[header.key.downcase.tr('-', '_')] = header.value
     end
+
     headers["request_method"] = http_full_request.getMethod.name
     headers["request_path"] = http_full_request.getUri
     headers["http_version"] = http_full_request.getProtocolVersion.text
