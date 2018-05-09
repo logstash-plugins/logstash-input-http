@@ -190,6 +190,19 @@ describe LogStash::Inputs::Http do
         expect(event.get("message")).to eq(body)
       end
     end
+    
+    context "when receiving a content-type with a charset" do
+      subject { LogStash::Inputs::Http.new("port" => port,
+                                           "additional_codecs" => { "application/json" => "plain" }) }
+      it "should decode the message accordingly" do
+        body = { "message" => "Hello" }.to_json
+        client.post("http://127.0.0.1:#{port}/meh.json",
+                    :headers => { "content-type" => "application/json; charset=utf-8" },
+                      :body => body).call
+        event = logstash_queue.pop
+        expect(event.get("message")).to eq(body)
+      end
+    end
 
     context "when using custom headers" do
       let(:custom_headers) { { 'access-control-allow-origin' => '*' } }
