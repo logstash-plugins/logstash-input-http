@@ -4,6 +4,8 @@ require "logstash/namespace"
 require "stud/interval"
 require "logstash-input-http_jars"
 
+java_import "io.netty.handler.codec.http.HttpUtil"
+
 # Using this input you can receive single or multiline events over http(s).
 # Applications can send a HTTP POST request with a body to the endpoint started by this
 # input and Logstash will convert it into an event for subsequent processing. Users 
@@ -152,7 +154,8 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   end
 
   def decode_body(headers, remote_address, body, default_codec, additional_codecs)
-    codec = additional_codecs.fetch(headers["content_type"], default_codec)
+    content_type = headers.fetch("content_type", "")
+    codec = additional_codecs.fetch(HttpUtil.getMimeType(content_type), default_codec)
     codec.decode(body) { |event| push_decoded_event(headers, remote_address, event) }
     codec.flush { |event| push_decoded_event(headers, remote_address, event) }
     true
