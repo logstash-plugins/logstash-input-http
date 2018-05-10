@@ -1,5 +1,8 @@
 ## 3.2.0
-  - adds `request_headers_target_field` and `remote_host_target_field` configuration options with defaults to `host` and `headers` respectively #68
+  - Add `request_headers_target_field` and `remote_host_target_field` configuration options with default to `host` and `headers` respectively #68
+  - Sanitize content-type header with getMimeType #87
+  - Move most message handling code to java #85
+  - Fix: respond with correct http protocol version #84
 
 ## 3.1.0
   - Replace Puma web server with Netty
