@@ -14,37 +14,27 @@ module LogStash module Inputs class Http
 
     attr_reader :input
 
-    def initialize(input, default_codec, additional_codecs)
+    def initialize(input, default_codec, additional_codecs, auth_token)
       @input = input
       @default_codec = default_codec
       @additional_codecs = additional_codecs
+      @auth_token = auth_token
     end
 
-    def onNewMessage(remote_address, message)
-      if valid_auth?(message)
-        message.headers.remove(HttpHeaderNames::AUTHORIZATION)
-        status, headers, content = @input.decode_body(remote_address, message, @default_codec, @additional_codecs)
+    def validates_token(token)
+      if @auth_token
+        @auth_token == token
       else
-        status, headers, content = 401, {}, 'failed to authenticate'
+        true
       end
-      generate_response(status, message.get_protocol_version, headers, content)
     end
 
-    private
-    def generate_response(status, version, headers, content)
-      payload = Unpooled.copiedBuffer(content.to_java_string, CharsetUtil::UTF_8)
-      response = DefaultFullHttpResponse.new(
-        version,
-        HttpResponseStatus.valueOf(status),
-        payload)
-      response.headers().set(HttpHeaderNames::CONTENT_LENGTH, payload.readable_bytes());
-      response.headers().set(HttpHeaderNames::CONTENT_TYPE, "text/plain");
-      headers.each { |k, v| response.headers().set(k, v) }
-      response
+    def onNewMessage(remote_address, headers, body)
+      @input.decode_body(headers, remote_address, body, @default_codec, @additional_codecs)
     end
 
     def copy
-      MessageHandler.new(@input, @default_codec.clone, clone_additional_codecs())
+      MessageHandler.new(@input, @default_codec.clone, clone_additional_codecs(), @auth_token)
     end
 
     def clone_additional_codecs
@@ -55,8 +45,8 @@ module LogStash module Inputs class Http
       clone_additional_codecs
     end
 
-    def valid_auth?(message)
-      @input.valid_auth?(message.headers.get(HttpHeaderNames::AUTHORIZATION))
+    def response_headers
+      @input.response_headers
     end
   end
 end; end; end

@@ -133,7 +133,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     end
 
     require "logstash/inputs/http/message_handler"
-    message_handler = MessageHandler.new(self, @codec, @codecs)
+    message_handler = MessageHandler.new(self, @codec, @codecs, @auth_token)
     @http_server = create_http_server(message_handler)
   end # def register
 
@@ -151,23 +151,11 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     @http_server.close() rescue nil
   end
 
-  def decode_body(remote_address, http_full_request, default_codec, additional_codecs)
-    body = read_bytes(http_full_request.content)
-    headers = {}
-
-    http_full_request.headers.each do |header|
-      headers[header.key.downcase.tr('-', '_')] = header.value
-    end
-    headers["request_method"] = http_full_request.getMethod.name
-    headers["request_path"] = http_full_request.getUri
-    headers["http_version"] = http_full_request.getProtocolVersion.text
-    headers["http_accept"] = headers.delete("accept")
-    headers["http_host"] = headers.delete("host")
-    headers["http_user_agent"] = headers.delete("user_agent")
+  def decode_body(headers, remote_address, body, default_codec, additional_codecs)
     codec = additional_codecs.fetch(headers["content_type"], default_codec)
     codec.decode(body) { |event| push_decoded_event(headers, remote_address, event) }
     codec.flush { |event| push_decoded_event(headers, remote_address, event) }
-    [200, @response_headers, 'ok']
+    true
   rescue => e
     @logger.error(
       "unable to process event.",
@@ -175,7 +163,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       :class => e.class.name,
       :backtrace => e.backtrace
     )
-    [500, @response_headers, 'internal error']
+    false
   end
 
   def push_decoded_event(headers, remote_address, event)
@@ -183,21 +171,6 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     event.set("host", remote_address)
     decorate(event)
     @queue << event
-  end
-
-  def valid_auth?(token)
-    if @auth_token
-      @auth_token == token
-    else
-      true
-    end
-  end
-
-  private
-  def read_bytes(bytebuffer)
-    bytes = Java::byte[bytebuffer.readableBytes].new
-    bytebuffer.getBytes(0, bytes)
-    String.from_java_bytes(bytes, "ASCII-8BIT")
   end
 
   def validate_ssl_settings!
