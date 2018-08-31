@@ -7,7 +7,7 @@ import io.netty.handler.codec.http.HttpContentDecompressor;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.ssl.SslHandler;
-import org.logstash.plugins.inputs.http.util.SslBuilder;
+import org.logstash.plugins.inputs.http.util.SslHandlerProvider;
 
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -16,7 +16,7 @@ import java.util.concurrent.ThreadPoolExecutor;
  */
 public class HttpInitializer extends ChannelInitializer<SocketChannel> {
     private final IMessageHandler messageHandler;
-    private SslBuilder sslBuilder;
+    private SslHandlerProvider sslHandlerProvider;
     private final int maxContentLength;
     private final ThreadPoolExecutor executorGroup;
 
@@ -30,8 +30,8 @@ public class HttpInitializer extends ChannelInitializer<SocketChannel> {
     protected void initChannel(SocketChannel socketChannel) throws Exception {
         ChannelPipeline pipeline = socketChannel.pipeline();
 
-        if(sslBuilder != null) {
-            SslHandler sslHandler = sslBuilder.build(socketChannel.alloc());
+        if(sslHandlerProvider != null) {
+            SslHandler sslHandler = sslHandlerProvider.getSslHandler(socketChannel.alloc());
             pipeline.addLast(sslHandler);
         }
         pipeline.addLast(new HttpServerCodec());
@@ -40,8 +40,8 @@ public class HttpInitializer extends ChannelInitializer<SocketChannel> {
         pipeline.addLast(new HttpServerHandler(messageHandler.copy(), executorGroup));
     }
 
-    public void enableSSL(SslBuilder builder) {
-        sslBuilder = builder;
+    public void enableSSL(SslHandlerProvider sslHandlerProvider) {
+        this.sslHandlerProvider = sslHandlerProvider;
     }
 }
 

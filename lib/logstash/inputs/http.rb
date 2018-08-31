@@ -212,37 +212,33 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   def build_ssl_params
     return nil unless @ssl
 
+    ssl_builder = nil
+    verify_mode_string = nil
+
     if @keystore && @keystore_password
       ssl_builder = org.logstash.plugins.inputs.http.util.JksSslBuilder.new(@keystore, @keystore_password.value)
-      if original_params.key?("verify_mode")
-        if @verify_mode.upcase == "FORCE_PEER"
-          ssl_builder.setVerifyMode(org.logstash.plugins.inputs.http.util.SslBuilder::SslClientVerifyMode::FORCE_PEER)
-        elsif @verify_mode.upcase == "PEER"
-          ssl_builder.setVerifyMode(org.logstash.plugins.inputs.http.util.SslBuilder::SslClientVerifyMode::VERIFY_PEER)
-        end
+      verify_mode_string = @verify_mode.upcase if original_params.key?("verify_mode")
+    else
+      begin
+        ssl_builder = org.logstash.plugins.inputs.http.util.SslSimpleBuilder.new(@ssl_certificate, @ssl_key, @ssl_key_passphrase.nil? ? nil : @ssl_key_passphrase.value)
+        .setCipherSuites(normalized_ciphers)
+      rescue java.lang.IllegalArgumentException => e
+        raise LogStash::ConfigurationError.new(e)
       end
-      return ssl_builder
-    end
 
-    begin
-      ssl_builder = org.logstash.plugins.inputs.http.util.SslSimpleBuilder.new(@ssl_certificate, @ssl_key, @ssl_key_passphrase.nil? ? nil : @ssl_key_passphrase.value)
-      .setProtocols(convert_protocols)
-      .setCipherSuites(normalized_ciphers)
-    rescue java.lang.IllegalArgumentException => e
-      raise LogStash::ConfigurationError.new(e)
-    end
-
-    ssl_builder.setHandshakeTimeoutMilliseconds(@ssl_handshake_timeout)
-
-    if client_authentication?
-      if @ssl_verify_mode.upcase == "FORCE_PEER"
-        ssl_builder.setVerifyMode(org.logstash.plugins.inputs.http.util.SslBuilder::SslClientVerifyMode::FORCE_PEER)
-      elsif @ssl_verify_mode.upcase == "PEER"
-        ssl_builder.setVerifyMode(org.logstash.plugins.inputs.http.util.SslBuilder::SslClientVerifyMode::VERIFY_PEER)
+      if client_authentication?
+        verify_mode_string = @ssl_verify_mode.upcase
+        ssl_builder.setCertificateAuthorities(@ssl_certificate_authorities)
       end
-      ssl_builder.setCertificateAuthorities(@ssl_certificate_authorities)
     end
-    ssl_builder
+
+    ssl_context = ssl_builder.build()
+    ssl_handler_provider = org.logstash.plugins.inputs.http.util.SslHandlerProvider.new(ssl_context)
+    ssl_handler_provider.setVerifyMode(verify_mode_string)
+    ssl_handler_provider.setProtocols(convert_protocols)
+    ssl_handler_provider.setHandshakeTimeoutMilliseconds(@ssl_handshake_timeout)
+
+    ssl_handler_provider
   end
 
   def ssl_key_configured?

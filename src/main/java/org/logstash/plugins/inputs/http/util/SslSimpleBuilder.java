@@ -1,14 +1,11 @@
 package org.logstash.plugins.inputs.http.util;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.SslHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import javax.net.ssl.SSLEngine;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -25,12 +22,6 @@ import java.util.List;
 public class SslSimpleBuilder implements SslBuilder {
 
     private final static Logger logger = LogManager.getLogger(SslSimpleBuilder.class);
-
-    private File sslKeyFile;
-    private File sslCertificateFile;
-    private SslClientVerifyMode verifyMode = SslClientVerifyMode.FORCE_PEER;
-
-    private long handshakeTimeoutMilliseconds = 10000;
 
     /*
     Modern Ciphers Compatibility List from
@@ -49,7 +40,8 @@ public class SslSimpleBuilder implements SslBuilder {
     };
 
     private String[] ciphers = DEFAULT_CIPHERS;
-    private String[] protocols = new String[] { "TLSv1.2" };
+    private File sslKeyFile;
+    private File sslCertificateFile;
     private String[] certificateAuthorities;
     private String passPhrase;
 
@@ -58,11 +50,6 @@ public class SslSimpleBuilder implements SslBuilder {
         sslKeyFile = new File(sslKeyFilePath);
         passPhrase = pass;
         ciphers = DEFAULT_CIPHERS;
-    }
-
-    public SslSimpleBuilder setProtocols(String[] protocols) {
-        this.protocols = protocols;
-        return this;
     }
 
     public SslSimpleBuilder setCipherSuites(String[] ciphersSuite) throws IllegalArgumentException {
@@ -83,32 +70,13 @@ public class SslSimpleBuilder implements SslBuilder {
         return this;
     }
 
-    public SslSimpleBuilder setHandshakeTimeoutMilliseconds(int timeout) {
-        handshakeTimeoutMilliseconds = timeout;
-        return this;
-    }
-
-    public SslSimpleBuilder setVerifyMode(SslClientVerifyMode mode) {
-        verifyMode = mode;
-        return this;
-    }
-
-    public File getSslKeyFile() {
-        return sslKeyFile;
-    }
-
-    public File getSslCertificateFile() {
-        return sslCertificateFile;
-    }
-
-    public SslHandler build(ByteBufAllocator bufferAllocator) throws IOException, NoSuchAlgorithmException, CertificateException {
+    public SslContext build() throws IOException, NoSuchAlgorithmException, CertificateException {
         SslContextBuilder builder = SslContextBuilder.forServer(sslCertificateFile, sslKeyFile, passPhrase);
 
         if(logger.isDebugEnabled()) {
             logger.debug("Available ciphers:" + Arrays.toString(OpenSsl.availableOpenSslCipherSuites().toArray()));
             logger.debug("Ciphers:  " + Arrays.toString(ciphers));
         }
-
 
         builder.ciphers(Arrays.asList(ciphers));
 
@@ -119,32 +87,7 @@ public class SslSimpleBuilder implements SslBuilder {
             builder.trustManager(loadCertificateCollection(certificateAuthorities));
         }
 
-        SslContext context = builder.build();
-        SslHandler sslHandler = context.newHandler(bufferAllocator);
-
-        if(logger.isDebugEnabled())
-            logger.debug("TLS: " + Arrays.toString(protocols));
-
-        SSLEngine engine = sslHandler.engine();
-        engine.setEnabledProtocols(protocols);
-
-
-        if(requireClientAuth()) {
-            // server is doing the handshake
-            engine.setUseClientMode(false);
-
-            if(verifyMode == SslClientVerifyMode.FORCE_PEER) {
-                // Explicitly require a client certificate
-                engine.setNeedClientAuth(true);
-            } else if(verifyMode == SslClientVerifyMode.VERIFY_PEER) {
-                // If the client supply a client certificate we will verify it.
-                engine.setWantClientAuth(true);
-            }
-        }
-
-        sslHandler.setHandshakeTimeoutMillis(handshakeTimeoutMilliseconds);
-
-        return sslHandler;
+        return builder.build();
     }
 
     private X509Certificate[] loadCertificateCollection(String[] certificates) throws IOException, CertificateException {
@@ -172,17 +115,5 @@ public class SslSimpleBuilder implements SslBuilder {
         }
 
         return false;
-    }
-
-    private FileInputStream createFileInputStream(String filepath) throws FileNotFoundException {
-        return new FileInputStream(filepath);
-    }
-
-    /**
-     * Get the supported protocols
-     * @return a defensive copy of the supported protocols
-     */
-    String[] getProtocols() {
-        return protocols.clone();
     }
 }
