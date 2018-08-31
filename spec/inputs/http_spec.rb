@@ -361,6 +361,7 @@ describe LogStash::Inputs::Http do
                                            "ssl_certificate" => ssl_certificate.path,
                                            "ssl_key" => ssl_key.path) }
       it "should not raise exception" do
+        expect(subject).to receive(:build_ssl_params)
         expect { subject.register }.to_not raise_exception
       end
     end

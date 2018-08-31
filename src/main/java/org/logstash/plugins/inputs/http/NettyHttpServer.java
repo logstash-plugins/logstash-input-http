@@ -6,10 +6,8 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.http.DefaultHttpHeaders;
-import io.netty.handler.codec.http.HttpHeaders;
 import org.logstash.plugins.inputs.http.util.CustomRejectedExecutionHandler;
-import org.logstash.plugins.inputs.http.util.SslBuilder;
+import org.logstash.plugins.inputs.http.util.SslHandlerProvider;
 
 import java.io.Closeable;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -31,7 +29,7 @@ public class NettyHttpServer implements Runnable, Closeable {
     private final ThreadPoolExecutor executorGroup;
 
     public NettyHttpServer(String host, int port, IMessageHandler messageHandler,
-                           SslBuilder sslBuilder, int threads,
+                           SslHandlerProvider sslHandlerProvider, int threads,
                            int maxPendingRequests, int maxContentLength)
     {
         this.host = host;
@@ -44,8 +42,8 @@ public class NettyHttpServer implements Runnable, Closeable {
 
         final HttpInitializer httpInitializer = new HttpInitializer(messageHandler, executorGroup, maxContentLength);
 
-        if (sslBuilder != null) {
-            httpInitializer.enableSSL(sslBuilder);
+        if (sslHandlerProvider != null) {
+            httpInitializer.enableSSL(sslHandlerProvider);
         }
 
         serverBootstrap = new ServerBootstrap()

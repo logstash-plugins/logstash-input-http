@@ -1,12 +1,9 @@
 package org.logstash.plugins.inputs.http.util;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.SslContextBuilder;
 
-import io.netty.handler.ssl.SslHandler;
 
 import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManagerFactory;
 
 import io.netty.handler.ssl.SslContext;
@@ -25,18 +22,13 @@ public class JksSslBuilder implements SslBuilder {
     private static final String ALGORITHM = "ssl.KeyManagerFactory.algorithm";
     private final String keyStorePath;
     private final char[] keyStorePassword;
-    private SslClientVerifyMode verifyMode;
 
     public JksSslBuilder(String keyStorePath, String keyStorePassword) {
         this.keyStorePath = keyStorePath;
         this.keyStorePassword = keyStorePassword.toCharArray();
     }
 
-    public void setVerifyMode(SslClientVerifyMode sslClientVerifyMode) {
-        this.verifyMode = sslClientVerifyMode;
-    }
-
-    public SslHandler build(ByteBufAllocator bufferAllocator) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException, KeyManagementException {
+    public SslContext build() throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException, KeyManagementException {
         String algorithm = Security.getProperty(ALGORITHM);
         if (algorithm == null) {
             algorithm = ALGORITHM_SUN_X509;
@@ -54,20 +46,7 @@ public class JksSslBuilder implements SslBuilder {
 
         SslContextBuilder builder = SslContextBuilder.forServer(kmf);
         builder.trustManager(tmf);
-        SslContext context = builder.build();
 
-        SslHandler sslHandler = context.newHandler(bufferAllocator);
-
-        SSLEngine engine = sslHandler.engine();
-
-        if(verifyMode == SslClientVerifyMode.FORCE_PEER) {
-            // Explicitly require a client certificate
-            engine.setNeedClientAuth(true);
-        } else if(verifyMode == SslClientVerifyMode.VERIFY_PEER) {
-            // If the client supply a client certificate we will verify it.
-            engine.setWantClientAuth(true);
-        }
-
-        return sslHandler;
+        return builder.build();
     }
 }
