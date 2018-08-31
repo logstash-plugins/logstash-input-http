@@ -1,3 +1,6 @@
+## 3.2.1
+  - Fix expensive SslContext creation per connection #93
+
 ## 3.2.0
   - Add `request_headers_target_field` and `remote_host_target_field` configuration options with default to `host` and `headers` respectively #68
   - Sanitize content-type header with getMimeType #87
