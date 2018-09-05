@@ -13,12 +13,13 @@ public class SslHandlerProvider {
 
     private final static Logger logger = LogManager.getLogger(SslSimpleBuilder.class);
     private final SslContext sslContext;
-    private SslClientVerifyMode verifyMode = SslClientVerifyMode.FORCE_PEER;
+    private SslClientVerifyMode verifyMode = SslClientVerifyMode.NONE;
     private long handshakeTimeoutMilliseconds = 10000;
 
     enum SslClientVerifyMode {
         VERIFY_PEER,
         FORCE_PEER,
+        NONE
     }
 
     private String[] protocols = new String[] { "TLSv1.2" };

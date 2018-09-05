@@ -191,10 +191,14 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       raise LogStash::ConfigurationError, "Certificate or JKS must be configured"
     end
 
-    if @ssl && original_params.key?("verify_mode")
-      if original_params.key?("ssl_verify_mode")
+    if @ssl && (original_params.key?("verify_mode") && original_params.key?("ssl_verify_mode"))
         raise LogStash::ConfigurationError, "Both 'ssl_verify_mode' and 'verify_mode' were set. Use only 'ssl_verify_mode'."
-      end
+    elsif original_params.key?("verify_mode")
+      @ssl_verify_mode_final = @verify_mode
+    elsif original_params.key?("ssl_verify_mode")
+      @ssl_verify_mode_final = @ssl_verify_mode
+    else
+      @ssl_verify_mode_final = @ssl_verify_mode
     end
 
     if @ssl && require_certificate_authorities? && !client_authentication?
@@ -213,11 +217,9 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     return nil unless @ssl
 
     ssl_builder = nil
-    verify_mode_string = nil
 
     if @keystore && @keystore_password
       ssl_builder = org.logstash.plugins.inputs.http.util.JksSslBuilder.new(@keystore, @keystore_password.value)
-      verify_mode_string = @verify_mode.upcase if original_params.key?("verify_mode")
     else
       begin
         ssl_builder = org.logstash.plugins.inputs.http.util.SslSimpleBuilder.new(@ssl_certificate, @ssl_key, @ssl_key_passphrase.nil? ? nil : @ssl_key_passphrase.value)
@@ -227,14 +229,13 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       end
 
       if client_authentication?
-        verify_mode_string = @ssl_verify_mode.upcase
         ssl_builder.setCertificateAuthorities(@ssl_certificate_authorities)
       end
     end
 
     ssl_context = ssl_builder.build()
     ssl_handler_provider = org.logstash.plugins.inputs.http.util.SslHandlerProvider.new(ssl_context)
-    ssl_handler_provider.setVerifyMode(verify_mode_string)
+    ssl_handler_provider.setVerifyMode(@ssl_verify_mode_final.upcase)
     ssl_handler_provider.setProtocols(convert_protocols)
     ssl_handler_provider.setHandshakeTimeoutMilliseconds(@ssl_handshake_timeout)
 
@@ -254,7 +255,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   end
 
   def require_certificate_authorities?
-    @ssl_verify_mode == "force_peer" || @ssl_verify_mode == "peer"
+    @ssl_verify_mode_final == "force_peer" || @ssl_verify_mode_final == "peer"
   end
 
   def normalized_ciphers
