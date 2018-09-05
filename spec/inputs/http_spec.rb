@@ -6,6 +6,8 @@ require "stud/temporary"
 require "zlib"
 require "stringio"
 
+java_import "io.netty.handler.ssl.util.SelfSignedCertificate"
+
 describe LogStash::Inputs::Http do
 
   before do
@@ -355,14 +357,64 @@ describe LogStash::Inputs::Http do
       end
     end
     context "with :ssl_certificate" do
-      let(:ssl_certificate) { Stud::Temporary.file }
-      let(:ssl_key) { Stud::Temporary.file }
+      let(:ssc) { SelfSignedCertificate.new }
+      let(:ssl_certificate) { ssc.certificate }
+      let(:ssl_key) { ssc.private_key }
+
+      after(:each) { ssc.delete }
+
       subject { LogStash::Inputs::Http.new("port" => port, "ssl" => true,
                                            "ssl_certificate" => ssl_certificate.path,
                                            "ssl_key" => ssl_key.path) }
       it "should not raise exception" do
-        expect(subject).to receive(:build_ssl_params)
         expect { subject.register }.to_not raise_exception
+      end
+
+      context "with ssl_verify_mode = none" do
+        subject { LogStash::Inputs::Http.new("port" => port, "ssl" => true,
+                                             "ssl_certificate" => ssl_certificate.path,
+                                             "ssl_key" => ssl_key.path,
+                                             "ssl_verify_mode" => "none"
+                                            ) }
+        it "should not raise exception" do
+          expect { subject.register }.to_not raise_exception
+        end
+      end
+      ["peer", "force_peer"].each do |verify_mode|
+        context "with ssl_verify_mode = #{verify_mode}" do
+          subject { LogStash::Inputs::Http.new("port" => port, "ssl" => true,
+                                               "ssl_certificate" => ssl_certificate.path,
+                                               "ssl_certificate_authorities" => ssl_certificate.path,
+                                               "ssl_key" => ssl_key.path,
+                                               "ssl_verify_mode" => verify_mode
+                                              ) }
+          it "should not raise exception" do
+            expect { subject.register }.to_not raise_exception
+          end
+        end
+      end
+      context "with verify_mode = none" do
+        subject { LogStash::Inputs::Http.new("port" => port, "ssl" => true,
+                                             "ssl_certificate" => ssl_certificate.path,
+                                             "ssl_key" => ssl_key.path,
+                                             "verify_mode" => "none"
+                                            ) }
+        it "should not raise exception" do
+          expect { subject.register }.to_not raise_exception
+        end
+      end
+      ["peer", "force_peer"].each do |verify_mode|
+        context "with verify_mode = #{verify_mode}" do
+          subject { LogStash::Inputs::Http.new("port" => port, "ssl" => true,
+                                               "ssl_certificate" => ssl_certificate.path,
+                                               "ssl_certificate_authorities" => ssl_certificate.path,
+                                               "ssl_key" => ssl_key.path,
+                                               "verify_mode" => verify_mode
+                                              ) }
+          it "should not raise exception" do
+            expect { subject.register }.to_not raise_exception
+          end
+        end
       end
     end
   end
