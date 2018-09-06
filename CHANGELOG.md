@@ -1,3 +1,6 @@
+## 3.2.2
+  - Fix some edge cases of the verify\_mode+ssl\_verify\_mode options
+
 ## 3.2.1
   - Fix expensive SslContext creation per connection #93
 
