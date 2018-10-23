@@ -1,4 +1,3 @@
-# encoding: utf-8
 module LogStash module Inputs class Http
   class TLS
     class TLSOption
@@ -16,9 +15,9 @@ module LogStash module Inputs class Http
     end
 
     TLS_PROTOCOL_OPTIONS = [
-      TLSOption.new("TLSv1", 1),
-      TLSOption.new("TLSv1.1", 1.1),
-      TLSOption.new("TLSv1.2", 1.2)
+      TLSOption.new('TLSv1', 1),
+      TLSOption.new('TLSv1.1', 1.1),
+      TLSOption.new('TLSv1.2', 1.2)
     ]
 
     def self.min
@@ -32,7 +31,7 @@ module LogStash module Inputs class Http
     def self.get_supported(versions)
       if versions.is_a?(Range)
         TLS_PROTOCOL_OPTIONS.select { |tls| versions.cover?(tls.version) }
-      else 
+      else
         TLS_PROTOCOL_OPTIONS.select { |tls| versions == tls.version }
       end
     end

@@ -1,14 +1,13 @@
-# encoding: utf-8
-require "logstash/inputs/base"
-require "logstash/namespace"
-require "stud/interval"
-require "logstash-input-http_jars"
+require 'logstash/inputs/base'
+require 'logstash/namespace'
+require 'stud/interval'
+require 'logstash-input-http_jars'
 
-java_import "io.netty.handler.codec.http.HttpUtil"
+java_import 'io.netty.handler.codec.http.HttpUtil'
 
 # Using this input you can receive single or multiline events over http(s).
 # Applications can send a HTTP POST request with a body to the endpoint started by this
-# input and Logstash will convert it into an event for subsequent processing. Users 
+# input and Logstash will convert it into an event for subsequent processing. Users
 # can pass plain text, JSON, or any formatted data and use a corresponding codec with this
 # input. For Content-Type `application/json` the `json` codec is used, but for all other
 # data formats, `plain` codec is used.
@@ -16,28 +15,28 @@ java_import "io.netty.handler.codec.http.HttpUtil"
 # This input can also be used to receive webhook requests to integrate with other services
 # and applications. By taking advantage of the vast plugin ecosystem available in Logstash
 # you can trigger actionable events right from your application.
-# 
+#
 # ==== Security
 # This plugin supports standard HTTP basic authentication headers to identify the requester.
 # You can pass in an username, password combination while sending data to this input
 #
-# You can also setup SSL and send data securely over https, with an option of validating 
-# the client's certificate. Currently, the certificate setup is through 
-# https://docs.oracle.com/cd/E19509-01/820-3503/ggfen/index.html[Java Keystore 
+# You can also setup SSL and send data securely over https, with an option of validating
+# the client's certificate. Currently, the certificate setup is through
+# https://docs.oracle.com/cd/E19509-01/820-3503/ggfen/index.html[Java Keystore
 # format]
 #
 class LogStash::Inputs::Http < LogStash::Inputs::Base
-  require "logstash/inputs/http/tls"
+  require 'logstash/inputs/http/tls'
 
-  config_name "http"
+  config_name 'http'
 
   # Codec used to decode the incoming data.
   # This codec will be used as a fall-back if the content-type
-  # is not found in the "additional_codecs" hash
-  default :codec, "plain"
+  # is not found in the 'additional_codecs' hash
+  default :codec, 'plain'
 
   # The host or ip to bind
-  config :host, :validate => :string, :default => "0.0.0.0"
+  config :host, :validate => :string, :default => '0.0.0.0'
 
   # The TCP port to bind to
   config :port, :validate => :number, :default => 8080
@@ -79,10 +78,10 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # If the client doesn't provide a certificate, the connection will be closed.
   #
   # This option needs to be used with `ssl_certificate_authorities` and a defined list of CAs.
-  config :ssl_verify_mode, :validate => ["none", "peer", "force_peer"], :default => "none"
+  config :ssl_verify_mode, :validate => ['none', 'peer', 'force_peer'], :default => 'none'
 
   # Time in milliseconds for an incomplete ssl handshake to timeout
-  config :ssl_handshake_timeout, :validate => :number, :default => 10000
+  config :ssl_handshake_timeout, :validate => :number, :default => 10_000
 
   # The minimum TLS version allowed for the encrypted connections. The value must be one of the following:
   # 1.0 for TLS 1.0, 1.1 for TLS 1.1, 1.2 for TLS 1.2
@@ -98,16 +97,16 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # Apply specific codecs for specific content types.
   # The default codec will be applied only after this list is checked
   # and no codec for the request's content-type is found
-  config :additional_codecs, :validate => :hash, :default => { "application/json" => "json" }
+  config :additional_codecs, :validate => :hash, :default => { 'application/json' => 'json' }
 
   # specify a custom set of response headers
   config :response_headers, :validate => :hash, :default => { 'Content-Type' => 'text/plain' }
 
   # target field for the client host of the http request
-  config :remote_host_target_field, :validate => :string, :default => "host"
+  config :remote_host_target_field, :validate => :string, :default => 'host'
 
   # target field for the client host of the http request
-  config :request_headers_target_field, :validate => :string, :default => "headers"
+  config :request_headers_target_field, :validate => :string, :default => 'headers'
 
   config :threads, :validate => :number, :required => false, :default => ::LogStash::Config::CpuCoreStrategy.maximum
 
@@ -122,11 +121,9 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   config :keystore_password, :validate => :password, :deprecated => "Set 'ssl_key_passphrase' instead."
 
   config :verify_mode, :validate => ['none', 'peer', 'force_peer'], :default => 'none',
-     :deprecated => "Set 'ssl_verify_mode' instead."
+         :deprecated => "Set 'ssl_verify_mode' instead."
 
-  public
   def register
-
     validate_ssl_settings!
 
     if @user && @password then
@@ -134,40 +131,40 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       @auth_token = "Basic #{token}"
     end
 
-    @codecs = Hash.new
+    @codecs = {}
 
     @additional_codecs.each do |content_type, codec|
-      @codecs[content_type] = LogStash::Plugin.lookup("codec", codec).new
+      @codecs[content_type] = LogStash::Plugin.lookup('codec', codec).new
     end
 
-    require "logstash/inputs/http/message_handler"
+    require 'logstash/inputs/http/message_handler'
     message_handler = MessageHandler.new(self, @codec, @codecs, @auth_token)
     @http_server = create_http_server(message_handler)
-  end # def register
+  end
 
   def run(queue)
     @queue = queue
-    @logger.info("Starting http input listener", :address => "#{@host}:#{@port}", :ssl => "#{@ssl}")
-    @http_server.run()
+    @logger.info('Starting http input listener', :address => "#{@host}:#{@port}", :ssl => "#{@ssl}")
+    @http_server.run
   end
 
   def stop
-    @http_server.close() rescue nil
+    @http_server.close rescue nil
   end
 
   def close
-    @http_server.close() rescue nil
+    @http_server.close rescue nil
   end
 
   def decode_body(headers, remote_address, body, default_codec, additional_codecs)
-    content_type = headers.fetch("content_type", "")
+    content_type = headers.fetch('content_type', '')
     codec = additional_codecs.fetch(HttpUtil.getMimeType(content_type), default_codec)
     codec.decode(body) { |event| push_decoded_event(headers, remote_address, event) }
     codec.flush { |event| push_decoded_event(headers, remote_address, event) }
     true
   rescue => e
     @logger.error(
-      "unable to process event.",
+      'unable to process event.',
       :message => e.message,
       :class => e.class.name,
       :backtrace => e.backtrace
@@ -184,33 +181,35 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   def validate_ssl_settings!
     if !@ssl
-      @logger.warn("SSL Certificate will not be used") if @ssl_certificate
-      @logger.warn("SSL Key will not be used") if @ssl_key
-      @logger.warn("SSL Java Key Store will not be used") if @keystore
+      @logger.warn('SSL Certificate will not be used') if @ssl_certificate
+      @logger.warn('SSL Key will not be used') if @ssl_key
+      @logger.warn('SSL Java Key Store will not be used') if @keystore
     elsif !(ssl_key_configured? || ssl_jks_configured?)
-      raise LogStash::ConfigurationError, "Certificate or JKS must be configured"
+      raise LogStash::ConfigurationError, 'Certificate or JKS must be configured'
     end
 
-    if @ssl && (original_params.key?("verify_mode") && original_params.key?("ssl_verify_mode"))
-        raise LogStash::ConfigurationError, "Both 'ssl_verify_mode' and 'verify_mode' were set. Use only 'ssl_verify_mode'."
-    elsif original_params.key?("verify_mode")
+    if @ssl && (original_params.key?('verify_mode') && original_params.key?('ssl_verify_mode'))
+      raise LogStash::ConfigurationError, "Both 'ssl_verify_mode' and 'verify_mode' were set. Use only 'ssl_verify_mode'."
+    elsif original_params.key?('verify_mode')
       @ssl_verify_mode_final = @verify_mode
-    elsif original_params.key?("ssl_verify_mode")
+    elsif original_params.key?('ssl_verify_mode')
       @ssl_verify_mode_final = @ssl_verify_mode
     else
       @ssl_verify_mode_final = @ssl_verify_mode
     end
 
     if @ssl && require_certificate_authorities? && !client_authentication?
-      raise LogStash::ConfigurationError, "Using `ssl_verify_mode` or `verify_mode` set to PEER or FORCE_PEER, requires the configuration of `ssl_certificate_authorities`"
+      raise LogStash::ConfigurationError, 'Using `ssl_verify_mode` or `verify_mode` set to PEER or FORCE_PEER, requires the configuration of `ssl_certificate_authorities`'
     elsif @ssl && !require_certificate_authorities? && client_authentication?
-      raise LogStash::ConfigurationError, "The configuration of `ssl_certificate_authorities` requires setting `ssl_verify_mode` or `verify_mode` to PEER or FORCE_PEER"
+      raise LogStash::ConfigurationError, 'The configuration of `ssl_certificate_authorities` requires setting `ssl_verify_mode` or `verify_mode` to PEER or FORCE_PEER'
     end
   end
 
   def create_http_server(message_handler)
     org.logstash.plugins.inputs.http.NettyHttpServer.new(
-      @host, @port, message_handler, build_ssl_params(), @threads, @max_pending_requests, @max_content_length)
+      @host, @port, message_handler, build_ssl_params,
+      @threads, @max_pending_requests, @max_content_length
+    )
   end
 
   def build_ssl_params
@@ -223,17 +222,15 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     else
       begin
         ssl_builder = org.logstash.plugins.inputs.http.util.SslSimpleBuilder.new(@ssl_certificate, @ssl_key, @ssl_key_passphrase.nil? ? nil : @ssl_key_passphrase.value)
-        .setCipherSuites(normalized_ciphers)
+                         .setCipherSuites(normalized_ciphers)
       rescue java.lang.IllegalArgumentException => e
         raise LogStash::ConfigurationError.new(e)
       end
 
-      if client_authentication?
-        ssl_builder.setCertificateAuthorities(@ssl_certificate_authorities)
-      end
+      ssl_builder.setCertificateAuthorities(@ssl_certificate_authorities) if client_authentication?
     end
 
-    ssl_context = ssl_builder.build()
+    ssl_context = ssl_builder.build
     ssl_handler_provider = org.logstash.plugins.inputs.http.util.SslHandlerProvider.new(ssl_context)
     ssl_handler_provider.setVerifyMode(@ssl_verify_mode_final.upcase)
     ssl_handler_provider.setProtocols(convert_protocols)
@@ -251,11 +248,11 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   end
 
   def client_authentication?
-    @ssl_certificate_authorities && @ssl_certificate_authorities.size > 0
+    @ssl_certificate_authorities && !@ssl_certificate_authorities.empty?
   end
 
   def require_certificate_authorities?
-    @ssl_verify_mode_final == "force_peer" || @ssl_verify_mode_final == "peer"
+    @ssl_verify_mode_final == 'force_peer' || @ssl_verify_mode_final == 'peer'
   end
 
   def normalized_ciphers
@@ -265,5 +262,4 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   def convert_protocols
     TLS.get_supported(@tls_min_version..@tls_max_version).map(&:name)
   end
-
-end # class LogStash::Inputs::Http
+end
