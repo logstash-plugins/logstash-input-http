@@ -1,3 +1,6 @@
+## 3.2.3
+  - Changed jar dependencies to reflect newer versions
+
 ## 3.2.2
   - Fix some edge cases of the verify\_mode+ssl\_verify\_mode options
 
