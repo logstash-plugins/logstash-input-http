@@ -1,3 +1,6 @@
+## 3.2.4
+ - Loosen jar-dependencies manager gem dependency to allow plugin to work with JRubies that include a later version.
+
 ## 3.2.3
   - Changed jar dependencies to reflect newer versions
 
