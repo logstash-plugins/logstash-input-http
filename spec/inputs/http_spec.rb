@@ -341,6 +341,22 @@ describe LogStash::Inputs::Http do
         end
       end
     end
+    describe "return code" do
+      it "responds with a 200" do
+        response = client.post("http://127.0.0.1:#{port}", :body => "hello")
+        response.call
+        expect(response.code).to eq(200)
+      end
+      context "when response_code is configured" do
+        let(:code) { 202 }
+        subject { LogStash::Inputs::Http.new("port" => port, "response_code" => code) }
+        it "responds with the configured code" do
+          response = client.post("http://127.0.0.1:#{port}", :body => "hello")
+          response.call
+          expect(response.code).to eq(202)
+        end
+      end
+    end
   end
 
   context "with :ssl => false" do

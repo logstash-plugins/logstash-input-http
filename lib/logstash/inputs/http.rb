@@ -115,6 +115,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   config :max_content_length, :validate => :number, :required => false, :default => 100 * 1024 * 1024
 
+  config :response_code, :validate => [200, 202, 204], :default => 200
   # Deprecated options
 
   # The JKS keystore to validate the client's certificates
@@ -210,7 +211,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   def create_http_server(message_handler)
     org.logstash.plugins.inputs.http.NettyHttpServer.new(
-      @host, @port, message_handler, build_ssl_params(), @threads, @max_pending_requests, @max_content_length)
+      @host, @port, message_handler, build_ssl_params(), @threads, @max_pending_requests, @max_content_length, @response_code)
   end
 
   def build_ssl_params
