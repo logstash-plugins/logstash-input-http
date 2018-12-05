@@ -6,6 +6,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.logstash.plugins.inputs.http.util.CustomRejectedExecutionHandler;
 import org.logstash.plugins.inputs.http.util.SslHandlerProvider;
 
@@ -27,20 +28,23 @@ public class NettyHttpServer implements Runnable, Closeable {
 
     private final EventLoopGroup processorGroup;
     private final ThreadPoolExecutor executorGroup;
+    private final HttpResponseStatus responseStatus;
 
     public NettyHttpServer(String host, int port, IMessageHandler messageHandler,
                            SslHandlerProvider sslHandlerProvider, int threads,
-                           int maxPendingRequests, int maxContentLength)
+                           int maxPendingRequests, int maxContentLength, int responseCode)
     {
         this.host = host;
         this.port = port;
+        this.responseStatus = HttpResponseStatus.valueOf(responseCode);
         processorGroup = new NioEventLoopGroup(threads, daemonThreadFactory("http-input-processor"));
 
         executorGroup = new ThreadPoolExecutor(threads, threads, 0, TimeUnit.MILLISECONDS,
                 new ArrayBlockingQueue<>(maxPendingRequests), daemonThreadFactory("http-input-handler-executor"),
                 new CustomRejectedExecutionHandler());
 
-        final HttpInitializer httpInitializer = new HttpInitializer(messageHandler, executorGroup, maxContentLength);
+        final HttpInitializer httpInitializer = new HttpInitializer(messageHandler, executorGroup,
+                                                                      maxContentLength, responseStatus);
 
         if (sslHandlerProvider != null) {
             httpInitializer.enableSSL(sslHandlerProvider);

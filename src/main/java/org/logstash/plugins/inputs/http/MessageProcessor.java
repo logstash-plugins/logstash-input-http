@@ -22,14 +22,16 @@ public class MessageProcessor implements RejectableRunnable {
     private final FullHttpRequest req;
     private final String remoteAddress;
     private final IMessageHandler messageHandler;
+    private final HttpResponseStatus responseStatus;
     private static final Charset charset = Charset.forName("UTF-8");
 
     MessageProcessor(ChannelHandlerContext ctx, FullHttpRequest req, String remoteAddress,
-                            IMessageHandler messageHandler) {
+                            IMessageHandler messageHandler, HttpResponseStatus responseStatus) {
         this.ctx = ctx;
         this.req = req;
         this.remoteAddress = remoteAddress;
         this.messageHandler = messageHandler;
+        this.responseStatus = responseStatus;
     }
 
     public void onRejection() {
@@ -76,19 +78,21 @@ public class MessageProcessor implements RejectableRunnable {
 
     private FullHttpResponse generateResponse(Map<String, String> stringHeaders) {
 
-        final ByteBuf payload = Unpooled.wrappedBuffer("ok".getBytes(charset));
         final FullHttpResponse response = new DefaultFullHttpResponse(
                 req.protocolVersion(),
-                HttpResponseStatus.OK,
-                payload);
-
+                responseStatus);
         final DefaultHttpHeaders headers = new DefaultHttpHeaders();
         for(String key : stringHeaders.keySet()) {
             headers.set(key, stringHeaders.get(key));
         }
         response.headers().set(headers);
-        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, payload.readableBytes());
-        response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
+
+        if (responseStatus != HttpResponseStatus.NO_CONTENT) {
+            final ByteBuf payload = Unpooled.wrappedBuffer("ok".getBytes(charset));
+            response.headers().set(HttpHeaderNames.CONTENT_LENGTH, payload.readableBytes());
+            response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
+            response.content().writeBytes(payload);
+        }
 
         return response;
     }
