@@ -52,6 +52,13 @@ You can pass in a username, password combination while sending data to this inpu
 You can also setup SSL and send data securely over https, with multiple options such as
 validating the client's certificate.
 
+[id="plugins-{type}s-{plugin}-codec-settings"]
+==== Codec settings
+This plugin has two configuration options for codecs: `codec` and `additional_codecs`. 
+
+Values in `additional_codecs` are prioritized over those specified in the
+`codec` option. That is, the default `codec` is applied only if no codec
+for the request's content-type is found in the `additional_codecs` setting.
 
 [id="plugins-{type}s-{plugin}-options"]
 ==== Http Input Configuration Options
