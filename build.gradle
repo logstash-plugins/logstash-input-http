@@ -6,7 +6,7 @@ apply plugin: 'idea'
 apply plugin: 'maven-publish'
 
 group 'org.logstash.plugins.input.http'
-version "${new File("VERSION").text.trim()}"
+version rootProject.file('VERSION').text.trim()
 
 description = "HTTP Input Netty implementation"
 
@@ -84,9 +84,4 @@ publishing {
       from components.java
     }
   }
-}
-
-task wrapper(type: Wrapper) {
-    description = 'Install Gradle wrapper'
-    gradleVersion = '2.14'
 }
