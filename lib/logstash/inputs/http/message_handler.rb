@@ -1,12 +1,11 @@
-# encoding: utf-8
-require "logstash-input-http_jars"
+require 'logstash-input-http_jars'
 java_import org.logstash.plugins.inputs.http.MessageHandler
-java_import "io.netty.handler.codec.http.DefaultFullHttpResponse"
-java_import "io.netty.handler.codec.http.HttpHeaderNames"
-java_import "io.netty.handler.codec.http.HttpVersion"
-java_import "io.netty.handler.codec.http.HttpResponseStatus"
-java_import "io.netty.buffer.Unpooled"
-java_import "io.netty.util.CharsetUtil"
+java_import 'io.netty.handler.codec.http.DefaultFullHttpResponse'
+java_import 'io.netty.handler.codec.http.HttpHeaderNames'
+java_import 'io.netty.handler.codec.http.HttpVersion'
+java_import 'io.netty.handler.codec.http.HttpResponseStatus'
+java_import 'io.netty.buffer.Unpooled'
+java_import 'io.netty.util.CharsetUtil'
 
 module LogStash module Inputs class Http
   class MessageHandler
@@ -34,7 +33,7 @@ module LogStash module Inputs class Http
     end
 
     def copy
-      MessageHandler.new(@input, @default_codec.clone, clone_additional_codecs(), @auth_token)
+      MessageHandler.new(@input, @default_codec.clone, clone_additional_codecs, @auth_token)
     end
 
     def clone_additional_codecs

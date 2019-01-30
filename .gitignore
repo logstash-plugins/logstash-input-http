@@ -4,3 +4,6 @@ Gemfile.bak
 .bundle
 vendor
 .idea
+lib/logstash-input-http_jars.rb
+build/
+.gradle/

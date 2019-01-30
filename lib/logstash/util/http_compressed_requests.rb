@@ -16,7 +16,7 @@ class CompressedRequests
       begin
         extracted = decode(env['rack.input'], env['HTTP_CONTENT_ENCODING'])
       rescue Zlib::Error
-        return [400, {'Content-Type' => 'text/plain'}, ["Failed to decompress body"]]
+        return [400, { 'Content-Type' => 'text/plain' }, ['Failed to decompress body']]
       end
 
       env.delete('HTTP_CONTENT_ENCODING')
@@ -29,11 +29,10 @@ class CompressedRequests
 
   def decode(input, content_encoding)
     case content_encoding
-      when 'gzip' then
-        Zlib::GzipReader.new(input).read
-      when 'deflate' then
-        Zlib::Inflate.inflate(input.read)
+    when 'gzip' then
+      Zlib::GzipReader.new(input).read
+    when 'deflate' then
+      Zlib::Inflate.inflate(input.read)
     end
   end
-
 end
