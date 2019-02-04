@@ -1,5 +1,5 @@
 ## 3.3.0
- - Added configurable response code option
+ - Added configurable response code option [#103](https://github.com/logstash-plugins/logstash-input-http/pull/103)
  - Added explanation about operation order of codec and additional_codecs
 
 ## 3.2.4
