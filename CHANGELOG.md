@@ -1,3 +1,7 @@
+## 3.3.0
+ - Added configurable response code option
+ - Added explanation about operation order of codec and additional_codecs
+
 ## 3.2.4
  - Loosen jar-dependencies manager gem dependency to allow plugin to work with JRubies that include a later version.
 
