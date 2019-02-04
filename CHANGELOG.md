@@ -1,6 +1,6 @@
 ## 3.3.0
  - Added configurable response code option [#103](https://github.com/logstash-plugins/logstash-input-http/pull/103)
- - Added explanation about operation order of codec and additional_codecs
+ - Added explanation about operation order of codec and additional_codecs [#104](https://github.com/logstash-plugins/logstash-input-http/pull/104)
 
 ## 3.2.4
  - Loosen jar-dependencies manager gem dependency to allow plugin to work with JRubies that include a later version.
