@@ -77,6 +77,7 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 | <<plugins-{type}s-{plugin}-port>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-max_pending_requests>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-response_headers>> |<<hash,hash>>|No
+| <<plugins-{type}s-{plugin}-response_code>> |<<number,number>>, one of `[200, 201, 202, 204]`|No
 | <<plugins-{type}s-{plugin}-ssl>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-ssl_certificate>> |a valid filesystem path|No
 | <<plugins-{type}s-{plugin}-ssl_certificate_authorities>> |<<array,array>>|No
@@ -182,6 +183,19 @@ This queue exists to deal with micro bursts of events and to improve overall thr
 so it should be changed very carefully as it can lead to memory pressure and impact performance.
 If you need to deal both periodic or unforeseen spikes in incoming requests consider enabling the
 Persistent Queue for the logstash pipeline.
+
+[id="plugins-{type}s-{plugin}-response_code"]
+===== `response_code`
+
+  * Value can be any of: 200, 201, 202, 204
+  * Default value is `200`
+
+The HTTP return code if the request is processed successfully.
+
+Other return codes may happen in the case of an error condition, such as
+invalid credentials (401), internal errors (503) or backpressure (429).
+
+If 204 (No Content) is set, the response body will not be sent in the response.
 
 [id="plugins-{type}s-{plugin}-response_headers"]
 ===== `response_headers` 
