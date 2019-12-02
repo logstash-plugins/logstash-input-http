@@ -1,4 +1,4 @@
-## 3.3.0
+## 3.3.1
  - Added 201 to valid response codes [#114](https://github.com/logstash-plugins/logstash-input-http/issues/114)
  - Documented response\_code option
 
