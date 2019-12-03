@@ -115,7 +115,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   config :max_content_length, :validate => :number, :required => false, :default => 100 * 1024 * 1024
 
-  config :response_code, :validate => [200, 202, 204], :default => 200
+  config :response_code, :validate => [200, 201, 202, 204], :default => 200
   # Deprecated options
 
   # The JKS keystore to validate the client's certificates

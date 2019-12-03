@@ -1,3 +1,7 @@
+## 3.3.1
+ - Added 201 to valid response codes [#114](https://github.com/logstash-plugins/logstash-input-http/issues/114)
+ - Documented response\_code option
+
 ## 3.3.0
  - Added configurable response code option [#103](https://github.com/logstash-plugins/logstash-input-http/pull/103)
  - Added explanation about operation order of codec and additional_codecs [#104](https://github.com/logstash-plugins/logstash-input-http/pull/104)
