@@ -1,3 +1,6 @@
+## 3.3.2
+ - Update netty and tcnative dependency [#118](https://github.com/logstash-plugins/logstash-input-http/issues/118)
+
 ## 3.3.1
  - Added 201 to valid response codes [#114](https://github.com/logstash-plugins/logstash-input-http/issues/114)
  - Documented response\_code option
