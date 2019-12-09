@@ -23,15 +23,18 @@ public class MessageProcessor implements RejectableRunnable {
     private final String remoteAddress;
     private final IMessageHandler messageHandler;
     private final HttpResponseStatus responseStatus;
+    private final String responseBody;
     private static final Charset charset = Charset.forName("UTF-8");
 
     MessageProcessor(ChannelHandlerContext ctx, FullHttpRequest req, String remoteAddress,
-                            IMessageHandler messageHandler, HttpResponseStatus responseStatus) {
+                            IMessageHandler messageHandler, HttpResponseStatus responseStatus,
+                            String responseBody) {
         this.ctx = ctx;
         this.req = req;
         this.remoteAddress = remoteAddress;
         this.messageHandler = messageHandler;
         this.responseStatus = responseStatus;
+        this.responseBody = responseBody;
     }
 
     public void onRejection() {
@@ -88,9 +91,8 @@ public class MessageProcessor implements RejectableRunnable {
         response.headers().set(headers);
 
         if (responseStatus != HttpResponseStatus.NO_CONTENT) {
-            final ByteBuf payload = Unpooled.wrappedBuffer("ok".getBytes(charset));
+            final ByteBuf payload = Unpooled.wrappedBuffer(this.responseBody.getBytes(charset));
             response.headers().set(HttpHeaderNames.CONTENT_LENGTH, payload.readableBytes());
-            response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
             response.content().writeBytes(payload);
         }
 

@@ -32,7 +32,8 @@ public class NettyHttpServer implements Runnable, Closeable {
 
     public NettyHttpServer(String host, int port, IMessageHandler messageHandler,
                            SslHandlerProvider sslHandlerProvider, int threads,
-                           int maxPendingRequests, int maxContentLength, int responseCode)
+                           int maxPendingRequests, int maxContentLength, int responseCode,
+                           String responseBody)
     {
         this.host = host;
         this.port = port;
@@ -44,7 +45,7 @@ public class NettyHttpServer implements Runnable, Closeable {
                 new CustomRejectedExecutionHandler());
 
         final HttpInitializer httpInitializer = new HttpInitializer(messageHandler, executorGroup,
-                                                                      maxContentLength, responseStatus);
+                                                                      maxContentLength, responseStatus, responseBody);
 
         if (sslHandlerProvider != null) {
             httpInitializer.enableSSL(sslHandlerProvider);
