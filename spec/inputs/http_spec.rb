@@ -394,6 +394,17 @@ describe LogStash::Inputs::Http do
           expect(response.body).to eq(body)
         end
       end
+      context "when response_body is configured and content-type is specified" do
+        let(:body) { "{\"test\": \"body\"}" }
+        let(:custom_headers) { { 'content-type' => "application/json" } }
+        subject { LogStash::Inputs::Http.new("port" => port, "response_body" => body, "response_headers" => custom_headers) }
+        it "responds with the configured body and headers" do
+          response = client.post("http://127.0.0.1:#{port}", :body => "Plain-text")
+          response.call
+          expect(response.body).to eq(body)
+          expect(response.headers.to_hash).to include({ "content-type" => "application/json" })
+        end
+      end
     end
   end
 
