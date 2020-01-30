@@ -1,3 +1,7 @@
+## 3.3.3
+ - Revert updates to netty and tcnative since CBC ciphers are still used in many contexts
+ - More about the reasoning can be found [here](https://github.com/elastic/logstash/issues/11499#issuecomment-580333510)
+
 ## 3.3.2
  - Update netty and tcnative dependency [#118](https://github.com/logstash-plugins/logstash-input-http/issues/118)
 
