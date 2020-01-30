@@ -1,11 +1,11 @@
 package org.logstash.plugins.inputs.http.util;
 
-import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.net.ssl.SSLServerSocketFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -26,7 +26,6 @@ public class SslSimpleBuilder implements SslBuilder {
     /*
     Modern Ciphers Compatibility List from
     https://wiki.mozilla.org/Security/Server_Side_TLS
-    This list require the OpenSSl engine for netty.
     */
     public final static String[] DEFAULT_CIPHERS = new String[] {
             "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
@@ -36,6 +35,7 @@ public class SslSimpleBuilder implements SslBuilder {
     };
 
     private String[] ciphers = DEFAULT_CIPHERS;
+    private String[] supportedCiphers;
     private File sslKeyFile;
     private File sslCertificateFile;
     private String[] certificateAuthorities;
@@ -46,14 +46,16 @@ public class SslSimpleBuilder implements SslBuilder {
         sslKeyFile = new File(sslKeyFilePath);
         passPhrase = pass;
         ciphers = DEFAULT_CIPHERS;
+        supportedCiphers = ((SSLServerSocketFactory)SSLServerSocketFactory.getDefault()).getSupportedCipherSuites();
     }
 
     public SslSimpleBuilder setCipherSuites(String[] ciphersSuite) throws IllegalArgumentException {
+
         for(String cipher : ciphersSuite) {
-            if(!OpenSsl.isCipherSuiteAvailable(cipher)) {
-                throw new IllegalArgumentException("Cipher `" + cipher + "` is not available");
-            } else {
+            if(Arrays.asList(supportedCiphers).contains(cipher)) {
                 logger.debug("Cipher is supported: " + cipher);
+            } else {
+                throw new IllegalArgumentException("Cipher `" + cipher + "` is not available");
             }
         }
 
@@ -70,7 +72,7 @@ public class SslSimpleBuilder implements SslBuilder {
         SslContextBuilder builder = SslContextBuilder.forServer(sslCertificateFile, sslKeyFile, passPhrase);
 
         if(logger.isDebugEnabled()) {
-            logger.debug("Available ciphers:" + Arrays.toString(OpenSsl.availableOpenSslCipherSuites().toArray()));
+            logger.debug("Available ciphers:" + Arrays.toString(supportedCiphers));
             logger.debug("Ciphers:  " + Arrays.toString(ciphers));
         }
 
