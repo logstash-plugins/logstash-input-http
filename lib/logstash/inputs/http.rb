@@ -4,11 +4,9 @@ require "logstash/namespace"
 require "stud/interval"
 require "logstash-input-http_jars"
 
-java_import "io.netty.handler.codec.http.HttpUtil"
-
 # Using this input you can receive single or multiline events over http(s).
 # Applications can send a HTTP POST request with a body to the endpoint started by this
-# input and Logstash will convert it into an event for subsequent processing. Users 
+# input and Logstash will convert it into an event for subsequent processing. Users
 # can pass plain text, JSON, or any formatted data and use a corresponding codec with this
 # input. For Content-Type `application/json` the `json` codec is used, but for all other
 # data formats, `plain` codec is used.
@@ -16,7 +14,7 @@ java_import "io.netty.handler.codec.http.HttpUtil"
 # This input can also be used to receive webhook requests to integrate with other services
 # and applications. By taking advantage of the vast plugin ecosystem available in Logstash
 # you can trigger actionable events right from your application.
-# 
+#
 # ==== Security
 # This plugin supports standard HTTP basic authentication headers to identify the requester.
 # You can pass in an username, password combination while sending data to this input
@@ -28,6 +26,8 @@ java_import "io.netty.handler.codec.http.HttpUtil"
 #
 class LogStash::Inputs::Http < LogStash::Inputs::Base
   require "logstash/inputs/http/tls"
+
+  java_import "io.netty.handler.codec.http.HttpUtil"
 
   config_name "http"
 
