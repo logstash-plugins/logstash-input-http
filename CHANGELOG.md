@@ -1,3 +1,6 @@
+## 3.3.4
+ - Refactor: scope (and avoid unused) java imports [#124](https://github.com/logstash-plugins/logstash-input-http/pull/124)
+
 ## 3.3.3
  - Revert updates to netty and tcnative since CBC ciphers are still used in many contexts
  - More about the reasoning can be found [here](https://github.com/elastic/logstash/issues/11499#issuecomment-580333510)
