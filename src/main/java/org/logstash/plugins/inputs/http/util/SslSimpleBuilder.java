@@ -1,6 +1,5 @@
 package org.logstash.plugins.inputs.http.util;
 
-import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import org.apache.logging.log4j.LogManager;
@@ -18,6 +17,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import javax.net.ssl.SSLServerSocketFactory;
 
 public class SslSimpleBuilder implements SslBuilder {
 
@@ -44,6 +44,8 @@ public class SslSimpleBuilder implements SslBuilder {
     private File sslCertificateFile;
     private String[] certificateAuthorities;
     private String passPhrase;
+    private String[] supportedCiphers = ((SSLServerSocketFactory)SSLServerSocketFactory
+            .getDefault()).getSupportedCipherSuites();
 
     public SslSimpleBuilder(String sslCertificateFilePath, String sslKeyFilePath, String pass) throws FileNotFoundException {
         sslCertificateFile = new File(sslCertificateFilePath);
@@ -54,10 +56,10 @@ public class SslSimpleBuilder implements SslBuilder {
 
     public SslSimpleBuilder setCipherSuites(String[] ciphersSuite) throws IllegalArgumentException {
         for(String cipher : ciphersSuite) {
-            if(!OpenSsl.isCipherSuiteAvailable(cipher)) {
+            if(Arrays.asList(supportedCiphers).contains(cipher)) {
+                logger.debug("Cipher is supported: {}", cipher);
+            }else{
                 throw new IllegalArgumentException("Cipher `" + cipher + "` is not available");
-            } else {
-                logger.debug("Cipher is supported: " + cipher);
             }
         }
 
@@ -74,7 +76,7 @@ public class SslSimpleBuilder implements SslBuilder {
         SslContextBuilder builder = SslContextBuilder.forServer(sslCertificateFile, sslKeyFile, passPhrase);
 
         if(logger.isDebugEnabled()) {
-            logger.debug("Available ciphers:" + Arrays.toString(OpenSsl.availableOpenSslCipherSuites().toArray()));
+            logger.debug("Available ciphers: " + Arrays.toString(supportedCiphers));
             logger.debug("Ciphers:  " + Arrays.toString(ciphers));
         }
 
