@@ -93,7 +93,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   config :tls_max_version, :validate => :number, :default => TLS.max.version
 
   # The list of ciphers suite to use, listed by priorities.
-  config :cipher_suites, :validate => :array, :default => org.logstash.plugins.inputs.http.util.SslSimpleBuilder::DEFAULT_CIPHERS
+  config :cipher_suites, :validate => :array, :default => org.logstash.plugins.inputs.http.util.SslSimpleBuilder.getDefaultCiphers
 
   # Apply specific codecs for specific content types.
   # The default codec will be applied only after this list is checked
