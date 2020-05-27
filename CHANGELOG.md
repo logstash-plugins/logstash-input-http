@@ -1,3 +1,9 @@
+## 3.3.5
+ - Updated jackson databind and Netty dependencies. Additionally, this release removes the dependency on `tcnative` +
+   `boringssl`, using JVM supplied ciphers instead. This may result in fewer ciphers being available if the JCE
+   unlimited strength jurisdiction policy is not installed. (This policy is installed by default on versions of the
+   JDK from u161 onwards)[#126](https://github.com/logstash-plugins/logstash-input-http/pull/126)
+
 ## 3.3.4
  - Refactor: scope (and avoid unused) java imports [#124](https://github.com/logstash-plugins/logstash-input-http/pull/124)
 
