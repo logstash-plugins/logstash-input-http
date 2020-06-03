@@ -1,6 +1,5 @@
 package org.logstash.plugins.inputs.http.util;
 
-import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import org.apache.logging.log4j.LogManager;
@@ -18,6 +17,8 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import javax.crypto.Cipher;
+import javax.net.ssl.SSLServerSocketFactory;
 
 public class SslSimpleBuilder implements SslBuilder {
 
@@ -26,9 +27,8 @@ public class SslSimpleBuilder implements SslBuilder {
     /*
     Modern Ciphers Compatibility List from
     https://wiki.mozilla.org/Security/Server_Side_TLS
-    This list require the OpenSSl engine for netty.
     */
-    public final static String[] DEFAULT_CIPHERS = new String[] {
+    private final static String[] DEFAULT_CIPHERS = new String[] {
             "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
             "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
             "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
@@ -39,25 +39,40 @@ public class SslSimpleBuilder implements SslBuilder {
             "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256"
     };
 
-    private String[] ciphers = DEFAULT_CIPHERS;
+    private final static String[] DEFAULT_CIPHERS_LIMITED = new String[] {
+            "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+            "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+            "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+            "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+            "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384",
+            "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384",
+            "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
+            "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256"
+    };
+
+    private String[] ciphers = getDefaultCiphers();
     private File sslKeyFile;
     private File sslCertificateFile;
     private String[] certificateAuthorities;
     private String passPhrase;
+    private String[] supportedCiphers = ((SSLServerSocketFactory)SSLServerSocketFactory
+            .getDefault()).getSupportedCipherSuites();
 
     public SslSimpleBuilder(String sslCertificateFilePath, String sslKeyFilePath, String pass) throws FileNotFoundException {
         sslCertificateFile = new File(sslCertificateFilePath);
         sslKeyFile = new File(sslKeyFilePath);
         passPhrase = pass;
-        ciphers = DEFAULT_CIPHERS;
     }
 
     public SslSimpleBuilder setCipherSuites(String[] ciphersSuite) throws IllegalArgumentException {
         for(String cipher : ciphersSuite) {
-            if(!OpenSsl.isCipherSuiteAvailable(cipher)) {
+            if(Arrays.asList(supportedCiphers).contains(cipher)) {
+                logger.debug("Cipher is supported: {}", cipher);
+            }else{
+                if (!isUnlimitedJCEAvailable()) {
+                    logger.warn("JCE Unlimited Strength Jurisdiction Policy not installed");
+                }
                 throw new IllegalArgumentException("Cipher `" + cipher + "` is not available");
-            } else {
-                logger.debug("Cipher is supported: " + cipher);
             }
         }
 
@@ -74,7 +89,7 @@ public class SslSimpleBuilder implements SslBuilder {
         SslContextBuilder builder = SslContextBuilder.forServer(sslCertificateFile, sslKeyFile, passPhrase);
 
         if(logger.isDebugEnabled()) {
-            logger.debug("Available ciphers:" + Arrays.toString(OpenSsl.availableOpenSslCipherSuites().toArray()));
+            logger.debug("Available ciphers: " + Arrays.toString(supportedCiphers));
             logger.debug("Ciphers:  " + Arrays.toString(ciphers));
         }
 
@@ -116,4 +131,24 @@ public class SslSimpleBuilder implements SslBuilder {
 
         return false;
     }
+
+    public static String[] getDefaultCiphers(){
+        if (isUnlimitedJCEAvailable()){
+            return DEFAULT_CIPHERS;
+        } else {
+            logger.warn("JCE Unlimited Strength Jurisdiction Policy not installed - max key length is 128 bits");
+            return DEFAULT_CIPHERS_LIMITED;
+        }
+    }
+
+
+    public static boolean isUnlimitedJCEAvailable(){
+        try {
+            return (Cipher.getMaxAllowedKeyLength("AES") > 128);
+        } catch (NoSuchAlgorithmException e) {
+            logger.warn("AES not available", e);
+            return false;
+        }
+    }
+
 }
