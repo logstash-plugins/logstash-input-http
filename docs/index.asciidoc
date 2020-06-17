@@ -197,6 +197,17 @@ invalid credentials (401), internal errors (503) or backpressure (429).
 
 If 204 (No Content) is set, the response body will not be sent in the response.
 
+[id="plugins-{type}s-{plugin}-response_body"]
+===== `response_body`
+
+  * Value type is: <<string,string>>
+  * Default value is `ok`
+
+The response body if the request is processed successfully.
+
+The response body is not validated and the `Content-type` is not adjusted to match its actual type.
+No body will be sent if `response_code` is configured to 204 (No Content).
+
 [id="plugins-{type}s-{plugin}-response_headers"]
 ===== `response_headers` 
 

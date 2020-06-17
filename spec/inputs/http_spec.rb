@@ -357,6 +357,55 @@ describe LogStash::Inputs::Http do
           expect(response.code).to eq(202)
         end
       end
+      context "when response_code is set to 204" do
+        let(:code) { 204 }
+        subject { LogStash::Inputs::Http.new("port" => port, "response_code" => code) }
+        it "responds with the configured code and no body even if forced" do
+          response = client.post("http://127.0.0.1:#{port}", :body => "hello")
+          response.call
+          expect(response.code).to eq(204)
+          expect(response.body).to eq(nil)
+        end
+      end
+    end
+    describe "return body" do
+      context "when response_body is not configured" do
+        subject { LogStash::Inputs::Http.new("port" => port) }
+        it "responds with the default body" do
+          response = client.post("http://127.0.0.1:#{port}", :body => "hello")
+          response.call
+          expect(response.body).to eq("ok")
+        end
+      end
+      context "when response_body is configured" do
+        let(:body) { "world!" }
+        subject { LogStash::Inputs::Http.new("port" => port, "response_body" => body) }
+        it "responds with the configured body" do
+          response = client.post("http://127.0.0.1:#{port}", :body => "hello")
+          response.call
+          expect(response.body).to eq(body)
+        end
+      end
+      context "when response_body is configured to an empty string" do
+        let(:body) { "" }
+        subject { LogStash::Inputs::Http.new("port" => port, "response_body" => body) }
+        it "responds with the configured body" do
+          response = client.post("http://127.0.0.1:#{port}", :body => "hello")
+          response.call
+          expect(response.body).to eq(body)
+        end
+      end
+      context "when response_body is configured and content-type is specified" do
+        let(:body) { "{\"test\": \"body\"}" }
+        let(:custom_headers) { { 'content-type' => "application/json" } }
+        subject { LogStash::Inputs::Http.new("port" => port, "response_body" => body, "response_headers" => custom_headers) }
+        it "responds with the configured body and headers" do
+          response = client.post("http://127.0.0.1:#{port}", :body => "Plain-text")
+          response.call
+          expect(response.body).to eq(body)
+          expect(response.headers.to_hash).to include({ "content-type" => "application/json" })
+        end
+      end
     end
   end
 
