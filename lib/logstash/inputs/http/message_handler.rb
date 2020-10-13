@@ -22,6 +22,10 @@ module LogStash module Inputs class Http
       end
     end
 
+    def requires_token
+      !!@auth_token
+    end
+
     def onNewMessage(remote_address, headers, body)
       @input.decode_body(headers, remote_address, body, @default_codec, @additional_codecs)
     end

@@ -11,6 +11,8 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.logstash.plugins.inputs.http.util.RejectableRunnable;
 
 import java.nio.charset.Charset;
@@ -24,6 +26,9 @@ public class MessageProcessor implements RejectableRunnable {
     private final IMessageHandler messageHandler;
     private final HttpResponseStatus responseStatus;
     private static final Charset charset = Charset.forName("UTF-8");
+
+
+    private final static Logger LOGGER = LogManager.getLogger(MessageHandler.class);
 
     MessageProcessor(ChannelHandlerContext ctx, FullHttpRequest req, String remoteAddress,
                             IMessageHandler messageHandler, HttpResponseStatus responseStatus) {
@@ -47,12 +52,19 @@ public class MessageProcessor implements RejectableRunnable {
     public void run() {
         try {
             final HttpResponse response;
-            final String token = req.headers().get(HttpHeaderNames.AUTHORIZATION);
-            req.headers().remove(HttpHeaderNames.AUTHORIZATION);
-            if (messageHandler.validatesToken(token)) {
-                response = processMessage();
+            if (messageHandler.requiresToken() && !req.headers().contains(HttpHeaderNames.AUTHORIZATION)) {
+                LOGGER.debug("Required authorization not provided; requesting authentication.");
+                response = generateAuthenticationRequestResponse();
             } else {
-                response = generateFailedResponse(HttpResponseStatus.UNAUTHORIZED);
+                final String token = req.headers().get(HttpHeaderNames.AUTHORIZATION);
+                req.headers().remove(HttpHeaderNames.AUTHORIZATION);
+                if (messageHandler.validatesToken(token)) {
+                    LOGGER.debug("Valid authorization; processing request.");
+                    response = processMessage();
+                } else {
+                    LOGGER.debug("Invalid authorization; rejecting request.");
+                    response = generateFailedResponse(HttpResponseStatus.UNAUTHORIZED);
+                }
             }
             ctx.writeAndFlush(response);
         } finally {
@@ -72,6 +84,13 @@ public class MessageProcessor implements RejectableRunnable {
 
     private FullHttpResponse generateFailedResponse(HttpResponseStatus status) {
         final FullHttpResponse response = new DefaultFullHttpResponse(req.protocolVersion(), status);
+        response.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);
+        return response;
+    }
+
+    private FullHttpResponse generateAuthenticationRequestResponse() {
+        final FullHttpResponse response = new DefaultFullHttpResponse(req.protocolVersion(), HttpResponseStatus.UNAUTHORIZED);
+        response.headers().set(HttpHeaderNames.WWW_AUTHENTICATE, "Basic realm=\"Logstash HTTP Input\"");
         response.headers().set(HttpHeaderNames.CONTENT_LENGTH, 0);
         return response;
     }

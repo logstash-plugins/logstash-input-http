@@ -23,6 +23,8 @@ public interface IMessageHandler {
      */
     boolean validatesToken(String token);
 
+    boolean requiresToken();
+
     /**
      *
      * @return copy of the message handler
