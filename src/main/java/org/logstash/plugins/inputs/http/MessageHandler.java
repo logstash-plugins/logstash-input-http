@@ -41,4 +41,6 @@ public class MessageHandler implements IMessageHandler {
         logger.debug("responseHeaders");
         return null;
     }
+
+    public boolean requiresToken() { return false; }
 }

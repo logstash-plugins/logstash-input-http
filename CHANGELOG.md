@@ -1,3 +1,10 @@
+## 3.3.6
+ - Fixes a regression introduced in 3.1.0's migration to the Netty back-end that broke some users'
+   browser-based workflows. When an instance of this plugin that is configured to require Basic
+   authentication receives a request that does not include authentication, it now appropriately
+   includes an `WWW-Authenticate` header in its `401 Unauthorized` response, allowing the browser
+   to collect credentials before retrying the request.
+
 ## 3.3.5
  - Updated jackson databind and Netty dependencies. Additionally, this release removes the dependency on `tcnative` +
    `boringssl`, using JVM supplied ciphers instead. This may result in fewer ciphers being available if the JCE

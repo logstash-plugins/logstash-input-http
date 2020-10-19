@@ -279,6 +279,11 @@ describe LogStash::Inputs::Http do
         it "should respond with 401" do
           expect(response.code).to eq(401)
         end
+        it 'should include a WWW-Authenticate: Basic header' do
+          expect(response['WWW-Authenticate']).to_not be_nil
+
+          expect(response['WWW-Authenticate']).to start_with('Basic realm=')
+        end
         it "should not generate an event" do
           expect(logstash_queue).to be_empty
         end
@@ -294,6 +299,9 @@ describe LogStash::Inputs::Http do
         end
         it "should respond with 401" do
           expect(response.code).to eq(401)
+        end
+        it 'should not include a WWW-Authenticate header' do
+          expect(response['WWW-Authenticate']).to be_nil
         end
         it "should not generate an event" do
           expect(logstash_queue).to be_empty
