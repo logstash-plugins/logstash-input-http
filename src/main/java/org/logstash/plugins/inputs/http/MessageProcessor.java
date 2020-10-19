@@ -25,9 +25,8 @@ public class MessageProcessor implements RejectableRunnable {
     private final String remoteAddress;
     private final IMessageHandler messageHandler;
     private final HttpResponseStatus responseStatus;
-    private static final Charset charset = Charset.forName("UTF-8");
 
-
+    private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
     private final static Logger LOGGER = LogManager.getLogger(MessageHandler.class);
 
     MessageProcessor(ChannelHandlerContext ctx, FullHttpRequest req, String remoteAddress,
@@ -74,7 +73,7 @@ public class MessageProcessor implements RejectableRunnable {
 
     private FullHttpResponse processMessage() {
         final Map<String, String> formattedHeaders = formatHeaders(req.headers());
-        final String body = req.content().toString(charset);
+        final String body = req.content().toString(UTF8_CHARSET);
         if (messageHandler.onNewMessage(remoteAddress, formattedHeaders, body)) {
             return generateResponse(messageHandler.responseHeaders());
         } else {
@@ -107,7 +106,7 @@ public class MessageProcessor implements RejectableRunnable {
         response.headers().set(headers);
 
         if (responseStatus != HttpResponseStatus.NO_CONTENT) {
-            final ByteBuf payload = Unpooled.wrappedBuffer("ok".getBytes(charset));
+            final ByteBuf payload = Unpooled.wrappedBuffer("ok".getBytes(UTF8_CHARSET));
             response.headers().set(HttpHeaderNames.CONTENT_LENGTH, payload.readableBytes());
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
             response.content().writeBytes(payload);
