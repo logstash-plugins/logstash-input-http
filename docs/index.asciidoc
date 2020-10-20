@@ -107,6 +107,16 @@ Apply specific codecs for specific content types.
 The default codec will be applied only after this list is checked
 and no codec for the request's content-type is found
 
+For example, to process a http request using _bulk you could use the following which would process the request using the json codec according to the Content-Type setting and, additionally, use the es_bulk codec:
+[source,ruby]
+    http {
+    additional_codecs => {"application/json"=>"es_bulk"}
+    response_headers => {
+      "Content-Type" => "application/json"
+                        }
+          }
+           }
+
 [id="plugins-{type}s-{plugin}-cipher_suites"]
 ===== `cipher_suites` 
 
