@@ -1,3 +1,6 @@
+## 3.3.7
+ - Feat: improved error handling/logging/unwraping [#133](https://github.com/logstash-plugins/logstash-input-http/pull/133)
+ 
 ## 3.3.6
  - Fixes a regression introduced in 3.1.0's migration to the Netty back-end that broke some users'
    browser-based workflows. When an instance of this plugin that is configured to require Basic
