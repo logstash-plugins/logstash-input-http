@@ -1,21 +1,13 @@
 package org.logstash.plugins.inputs.http.util;
 
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
-
-import io.netty.handler.ssl.SslContext;
 import java.io.FileInputStream;
-import java.io.IOException;
-import java.security.KeyManagementException;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
 import java.security.Security;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
 
 public class JksSslBuilder implements SslBuilder {
     private static final String ALGORITHM_SUN_X509 = "SunX509";
@@ -28,7 +20,7 @@ public class JksSslBuilder implements SslBuilder {
         this.keyStorePassword = keyStorePassword.toCharArray();
     }
 
-    public SslContext build() throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException, KeyManagementException {
+    public SslContext build() throws Exception {
         String algorithm = Security.getProperty(ALGORITHM);
         if (algorithm == null) {
             algorithm = ALGORITHM_SUN_X509;
@@ -47,6 +39,6 @@ public class JksSslBuilder implements SslBuilder {
         SslContextBuilder builder = SslContextBuilder.forServer(kmf);
         builder.trustManager(tmf);
 
-        return builder.build();
+        return SslSimpleBuilder.doBuild(builder);
     }
 }

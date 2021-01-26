@@ -11,6 +11,10 @@ import java.security.cert.CertificateException;
 
 public interface SslBuilder {
 
-    SslContext build() throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException, KeyManagementException;
+    /**
+     * @return context
+     * @throws Exception (IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException, KeyManagementException)
+     */
+    SslContext build() throws Exception;
 
 }

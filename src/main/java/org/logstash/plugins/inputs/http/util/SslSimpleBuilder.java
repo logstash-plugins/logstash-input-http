@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import javax.crypto.Cipher;
+import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLServerSocketFactory;
 
 public class SslSimpleBuilder implements SslBuilder {
@@ -85,7 +86,7 @@ public class SslSimpleBuilder implements SslBuilder {
         return this;
     }
 
-    public SslContext build() throws IOException, NoSuchAlgorithmException, CertificateException {
+    public SslContext build() throws Exception {
         SslContextBuilder builder = SslContextBuilder.forServer(sslCertificateFile, sslKeyFile, passPhrase);
 
         if(logger.isDebugEnabled()) {
@@ -102,7 +103,26 @@ public class SslSimpleBuilder implements SslBuilder {
             builder.trustManager(loadCertificateCollection(certificateAuthorities));
         }
 
-        return builder.build();
+        return doBuild(builder);
+    }
+
+    // NOTE: copy-pasta from input-beats
+    static SslContext doBuild(final SslContextBuilder builder) throws Exception {
+        try {
+            return builder.build();
+        } catch (SSLException e) {
+            logger.debug("Failed to initialize SSL", e);
+            // unwrap generic wrapped exception from Netty's JdkSsl{Client|Server}Context
+            if ("failed to initialize the server-side SSL context".equals(e.getMessage()) ||
+                "failed to initialize the client-side SSL context".equals(e.getMessage())) {
+                // Netty catches Exception and simply wraps: throw new SSLException("...", e);
+                if (e.getCause() instanceof Exception) throw (Exception) e.getCause();
+            }
+            throw e;
+        } catch (Exception e) {
+            logger.debug("Failed to initialize SSL", e);
+            throw e;
+        }
     }
 
     private X509Certificate[] loadCertificateCollection(String[] certificates) throws IOException, CertificateException {
