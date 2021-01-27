@@ -386,21 +386,21 @@ describe LogStash::Inputs::Http do
       let(:ssl_certificate) { ssc.certificate }
       let(:ssl_key) { ssc.private_key }
 
+      let(:config) do
+        { "port" => port, "ssl" => true, "ssl_certificate" => ssl_certificate.path, "ssl_key" => ssl_key.path }
+      end
+
       after(:each) { ssc.delete }
 
-      subject { LogStash::Inputs::Http.new("port" => port, "ssl" => true,
-                                           "ssl_certificate" => ssl_certificate.path,
-                                           "ssl_key" => ssl_key.path) }
+      subject { LogStash::Inputs::Http.new(config) }
+
       it "should not raise exception" do
         expect { subject.register }.to_not raise_exception
       end
 
       context "with ssl_verify_mode = none" do
-        subject { LogStash::Inputs::Http.new("port" => port, "ssl" => true,
-                                             "ssl_certificate" => ssl_certificate.path,
-                                             "ssl_key" => ssl_key.path,
-                                             "ssl_verify_mode" => "none"
-                                            ) }
+        subject { LogStash::Inputs::Http.new(config.merge("ssl_verify_mode" => "none")) }
+
         it "should not raise exception" do
           expect { subject.register }.to_not raise_exception
         end
@@ -419,11 +419,8 @@ describe LogStash::Inputs::Http do
         end
       end
       context "with verify_mode = none" do
-        subject { LogStash::Inputs::Http.new("port" => port, "ssl" => true,
-                                             "ssl_certificate" => ssl_certificate.path,
-                                             "ssl_key" => ssl_key.path,
-                                             "verify_mode" => "none"
-                                            ) }
+        subject { LogStash::Inputs::Http.new(config.merge("verify_mode" => "none")) }
+
         it "should not raise exception" do
           expect { subject.register }.to_not raise_exception
         end
@@ -441,6 +438,67 @@ describe LogStash::Inputs::Http do
           end
         end
       end
+
+      context "with invalid cipher_suites" do
+        let(:config) { super.merge("cipher_suites" => "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA38") }
+
+        it "should raise a configuration error" do
+          expect( subject.logger ).to receive(:error) do |msg, opts|
+            expect( msg ).to match /.*?configuration invalid/
+            expect( opts[:message] ).to match /TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA38.*? not available/
+          end
+          expect { subject.register }.to raise_error(LogStash::ConfigurationError)
+        end
+      end
+
+      context "with invalid ssl certificate" do
+        before do
+          cert = File.readlines path = config["ssl_certificate"]
+          i = cert.index { |line| line.index('END CERTIFICATE') }
+          cert[i - 1] = ''
+          File.write path, cert.join("\n")
+        end
+
+        it "should raise a configuration error" do
+          expect( subject.logger ).to receive(:error) do |msg, opts|
+            expect( msg ).to match /SSL configuration invalid/
+            expect( opts[:message] ).to match /File does not contain valid certificate/i
+          end
+          expect { subject.register }.to raise_error(LogStash::ConfigurationError)
+        end
+      end
+
+      context "with invalid ssl key config" do
+        let(:config) { super.merge("ssl_key_passphrase" => "1234567890") }
+
+        it "should raise a configuration error" do
+          expect( subject.logger ).to receive(:error) do |msg, opts|
+            expect( msg ).to match /SSL configuration invalid/
+            expect( opts[:message] ).to match /File does not contain valid private key/i
+          end
+          expect { subject.register }.to raise_error(LogStash::ConfigurationError)
+        end
+      end
+
+      context "with invalid ssl certificate_authorities" do
+        let(:config) do
+          super.merge("ssl_verify_mode" => "peer",
+                      "ssl_certificate_authorities" => [ ssc.certificate.path, ssc.private_key.path ])
+        end
+
+        it "should raise a cert error" do
+          expect( subject.logger ).to receive(:error) do |msg, opts|
+            expect( msg ).to match(/SSL configuration failed/), lambda { "unexpected: logger.error #{msg.inspect}, #{opts.inspect}" }
+            expect( opts[:message] ).to match /signed fields invalid/
+          end
+          begin
+            subject.register
+          rescue Java::JavaSecurityCert::CertificateParsingException
+            :pass
+          end
+        end
+      end
+
     end
   end
 end

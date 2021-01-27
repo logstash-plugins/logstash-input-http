@@ -217,16 +217,16 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   def build_ssl_params
     return nil unless @ssl
 
-    ssl_builder = nil
-
     if @keystore && @keystore_password
       ssl_builder = org.logstash.plugins.inputs.http.util.JksSslBuilder.new(@keystore, @keystore_password.value)
     else
       begin
-        ssl_builder = org.logstash.plugins.inputs.http.util.SslSimpleBuilder.new(@ssl_certificate, @ssl_key, @ssl_key_passphrase.nil? ? nil : @ssl_key_passphrase.value)
-        .setCipherSuites(normalized_ciphers)
+        ssl_builder = org.logstash.plugins.inputs.http.util.SslSimpleBuilder
+                          .new(@ssl_certificate, @ssl_key, @ssl_key_passphrase.nil? ? nil : @ssl_key_passphrase.value)
+                          .setCipherSuites(normalized_ciphers)
       rescue java.lang.IllegalArgumentException => e
-        raise LogStash::ConfigurationError.new(e)
+        @logger.error("SSL configuration invalid", error_details(e))
+        raise LogStash::ConfigurationError, e
       end
 
       if client_authentication?
@@ -234,13 +234,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       end
     end
 
-    ssl_context = ssl_builder.build()
-    ssl_handler_provider = org.logstash.plugins.inputs.http.util.SslHandlerProvider.new(ssl_context)
-    ssl_handler_provider.setVerifyMode(@ssl_verify_mode_final.upcase)
-    ssl_handler_provider.setProtocols(convert_protocols)
-    ssl_handler_provider.setHandshakeTimeoutMilliseconds(@ssl_handshake_timeout)
-
-    ssl_handler_provider
+    new_ssl_handshake_provider(ssl_builder)
   end
 
   def ssl_key_configured?
@@ -259,12 +253,41 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     @ssl_verify_mode_final == "force_peer" || @ssl_verify_mode_final == "peer"
   end
 
+  private
+
   def normalized_ciphers
     @cipher_suites.map(&:upcase)
   end
 
   def convert_protocols
     TLS.get_supported(@tls_min_version..@tls_max_version).map(&:name)
+  end
+
+  def new_ssl_handshake_provider(ssl_builder)
+    begin
+      ssl_handler_provider = org.logstash.plugins.inputs.http.util.SslHandlerProvider.new(ssl_builder.build())
+      ssl_handler_provider.setVerifyMode(@ssl_verify_mode_final.upcase)
+      ssl_handler_provider.setProtocols(convert_protocols)
+      ssl_handler_provider.setHandshakeTimeoutMilliseconds(@ssl_handshake_timeout)
+      ssl_handler_provider
+    rescue java.lang.IllegalArgumentException => e
+      @logger.error("SSL configuration invalid", error_details(e))
+      raise LogStash::ConfigurationError, e
+    rescue java.lang.Exception => e
+      @logger.error("SSL configuration failed", error_details(e, true))
+      raise e
+    end
+  end
+
+  def error_details(e, trace = false)
+    error_details = { :exception => e.class, :message => e.message }
+    error_details[:backtrace] = e.backtrace if trace || @logger.debug?
+    cause = e.cause
+    if cause && e != cause
+      error_details[:cause] = { :exception => cause.class, :message => cause.message }
+      error_details[:cause][:backtrace] = cause.backtrace if trace || @logger.debug?
+    end
+    error_details
   end
 
 end # class LogStash::Inputs::Http
