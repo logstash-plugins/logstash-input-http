@@ -488,10 +488,14 @@ describe LogStash::Inputs::Http do
 
         it "should raise a cert error" do
           expect( subject.logger ).to receive(:error) do |msg, opts|
-            expect( msg ).to match /SSL configuration failed/
+            expect( msg ).to match(/SSL configuration failed/), lambda { "unexpected: logger.error #{msg.inspect}, #{opts.inspect}" }
             expect( opts[:message] ).to match /signed fields invalid/
           end
-          expect { subject.register }.to raise_error(Java::JavaSecurityCert::CertificateParsingException)
+          begin
+            subject.register
+          rescue Java::JavaSecurityCert::CertificateParsingException
+            :pass
+          end
         end
       end
 
