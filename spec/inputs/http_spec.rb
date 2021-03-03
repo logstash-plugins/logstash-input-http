@@ -440,7 +440,7 @@ describe LogStash::Inputs::Http do
       end
 
       context "with invalid cipher_suites" do
-        let(:config) { super.merge("cipher_suites" => "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA38") }
+        let(:config) { super().merge("cipher_suites" => "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA38") }
 
         it "should raise a configuration error" do
           expect( subject.logger ).to receive(:error) do |msg, opts|
@@ -469,7 +469,7 @@ describe LogStash::Inputs::Http do
       end
 
       context "with invalid ssl key config" do
-        let(:config) { super.merge("ssl_key_passphrase" => "1234567890") }
+        let(:config) { super().merge("ssl_key_passphrase" => "1234567890") }
 
         it "should raise a configuration error" do
           expect( subject.logger ).to receive(:error) do |msg, opts|
@@ -482,7 +482,7 @@ describe LogStash::Inputs::Http do
 
       context "with invalid ssl certificate_authorities" do
         let(:config) do
-          super.merge("ssl_verify_mode" => "peer",
+          super().merge("ssl_verify_mode" => "peer",
                       "ssl_certificate_authorities" => [ ssc.certificate.path, ssc.private_key.path ])
         end
 
