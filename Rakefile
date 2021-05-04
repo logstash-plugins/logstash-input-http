@@ -1,22 +1,15 @@
-@files=[]
-
-task :default do
-  system("rake -T")
-end
-
 require 'logstash/devutils/rake'
-require 'jars/installer'
 
 task :install_jars do
-  system('./gradlew vendor')
+  sh('./gradlew clean vendor')
 end
 
 task :vendor => :install_jars
 
 task :test do
-  require 'rspec/core/runner'
   require 'rspec'
-  system './gradlew clean test'
+  require 'rspec/core/runner'
   Rake::Task[:install_jars].invoke
+  sh './gradlew test'
   exit(RSpec::Core::Runner.run(Rake::FileList['spec/**/*_spec.rb']))
 end
