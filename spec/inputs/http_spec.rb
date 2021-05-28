@@ -6,6 +6,7 @@ require "manticore"
 require "stud/temporary"
 require "zlib"
 require "stringio"
+require 'logstash/plugin_mixins/ecs_compatibility_support/spec_helper'
 
 java_import "io.netty.handler.ssl.util.SelfSignedCertificate"
 
@@ -34,20 +35,7 @@ describe LogStash::Inputs::Http do
     subject { LogStash::Inputs::Http.new("port" => port) }
 
     before :each do
-      subject.register
-      t = Thread.new { subject.run(logstash_queue) }
-      ok = false
-      until ok
-        begin
-          client.post("http://127.0.0.1:#{port}", :body => '{}').call
-        rescue => e
-          # retry
-        else
-          ok = true
-        end
-        sleep 0.01
-      end
-      logstash_queue.pop if logstash_queue.size == 1 # pop test event
+      setup_client
     end
 
     describe "handling overflowing requests with a 429" do
@@ -83,65 +71,6 @@ describe LogStash::Inputs::Http do
           expect(response.code).to eq(429)
         end
       end
-    end
-
-    describe "remote host" do
-      subject { LogStash::Inputs::Http.new(config.merge("port" => port)) }
-      context "by default" do
-        let(:config) { {} }
-        it "is written to the \"host\" field" do
-          client.post("http://localhost:#{port}/meh.json",
-                      :headers => { "content-type" => "text/plain" },
-                      :body => "hello").call
-          event = logstash_queue.pop
-          expect(event.get("host")).to eq("127.0.0.1")
-        end
-      end
-
-      context "when using remote_host_target_field" do
-        let(:config) { { "remote_host_target_field" => "remote_host" } }
-        it "is written to the value of \"remote_host_target_field\" property" do
-          client.post("http://localhost:#{port}/meh.json",
-                      :headers => { "content-type" => "text/plain" },
-                      :body => "hello").call
-          event = logstash_queue.pop
-          expect(event.get("remote_host")).to eq("127.0.0.1")
-        end
-      end
-    end
-
-    describe "request headers" do
-      subject { LogStash::Inputs::Http.new(config.merge("port" => port)) }
-      context "by default" do
-        let(:config) { {} }
-        it "are written to the \"headers\" field" do
-          client.post("http://localhost:#{port}/meh.json",
-                      :headers => { "content-type" => "text/plain" },
-                      :body => "hello").call
-          event = logstash_queue.pop
-          expect(event.get("headers")).to be_a(Hash)
-          expect(event.get("headers")).to include("request_method" => "POST")
-        end
-      end
-      context "when using request_headers_target_field" do
-        let(:config) { { "request_headers_target_field" => "request_headers" } }
-        it "are written to the field set in \"request_headers_target_field\"" do
-          client.post("http://localhost:#{port}/meh.json",
-                      :headers => { "content-type" => "text/plain" },
-                      :body => "hello").call
-          event = logstash_queue.pop
-          expect(event.get("request_headers")).to be_a(Hash)
-          expect(event.get("request_headers")).to include("request_method" => "POST")
-        end
-      end
-    end
-
-    it "should include remote host in \"host\" property" do
-      client.post("http://127.0.0.1:#{port}/meh.json",
-                  :headers => { "content-type" => "text/plain" },
-                  :body => "hello").call
-      event = logstash_queue.pop
-      expect(event.get("host")).to eq("127.0.0.1")
     end
 
     context "with default codec" do
@@ -366,6 +295,86 @@ describe LogStash::Inputs::Http do
         end
       end
     end
+  end
+
+  describe "ECS support", :ecs_compatibility_support, :aggregate_failures do
+    ecs_compatibility_matrix(:disabled, :v1) do |ecs_select|
+      let(:host_field) { ecs_select[disabled: "[host]", v1: "[host][ip]"] }
+      let(:header_field) { ecs_select[disabled: "headers", v1: "[@metadata][http][header]"] }
+
+      before :each do
+        allow_any_instance_of(described_class).to receive(:ecs_compatibility).and_return(ecs_compatibility)
+        setup_client
+      end
+
+      describe "remote host" do
+        subject { LogStash::Inputs::Http.new(config.merge("port" => port)) }
+        context "by default" do
+          let(:config) { {} }
+          it "is written to the \"host\" field" do
+            client.post("http://localhost:#{port}/meh.json",
+                        :headers => { "content-type" => "text/plain" },
+                        :body => "hello").call
+            event = logstash_queue.pop
+            expect(event.get(host_field)).to eq("127.0.0.1")
+          end
+        end
+
+        context "when using remote_host_target_field" do
+          let(:config) { { "remote_host_target_field" => "remote_host" } }
+          it "is written to the value of \"remote_host_target_field\" property" do
+            client.post("http://localhost:#{port}/meh.json",
+                        :headers => { "content-type" => "text/plain" },
+                        :body => "hello").call
+            event = logstash_queue.pop
+            expect(event.get("remote_host")).to eq("127.0.0.1")
+          end
+        end
+      end
+
+      describe "request headers" do
+        subject { LogStash::Inputs::Http.new(config.merge("port" => port)) }
+        context "by default" do
+          let(:config) { {} }
+          it "are written to the \"headers\" field" do
+            client.post("http://localhost:#{port}/meh.json",
+                        :headers => { "content-type" => "text/plain" },
+                        :body => "hello").call
+            event = logstash_queue.pop
+            expect(event.get(header_field)).to be_a(Hash)
+            expect(event.get(header_field)).to include("request_method" => "POST")
+          end
+        end
+        context "when using request_headers_target_field" do
+          let(:config) { { "request_headers_target_field" => "request_headers" } }
+          it "are written to the field set in \"request_headers_target_field\"" do
+            client.post("http://localhost:#{port}/meh.json",
+                        :headers => { "content-type" => "text/plain" },
+                        :body => "hello").call
+            event = logstash_queue.pop
+            expect(event.get("request_headers")).to be_a(Hash)
+            expect(event.get("request_headers")).to include("request_method" => "POST")
+          end
+        end
+      end
+    end
+  end
+
+  def setup_client
+    subject.register
+    t = Thread.new { subject.run(logstash_queue) }
+    ok = false
+    until ok
+      begin
+        client.post("http://127.0.0.1:#{port}", :body => '{}').call
+      rescue => e
+        # retry
+      else
+        ok = true
+      end
+      sleep 0.01
+    end
+    logstash_queue.pop if logstash_queue.size == 1 # pop test event
   end
 
   context "with :ssl => false" do
