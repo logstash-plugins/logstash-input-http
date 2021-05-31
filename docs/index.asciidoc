@@ -44,14 +44,14 @@ Here’s how ECS compatibility mode affects output.
 | ECS disabled | ECS v1 | Availability | Description
 
 | [host] | [host][ip] | Always | Host IP address
-| [headers] | [@metadata][http][header] | Always | Full headers metadata
+| [headers] | [@metadata][http][header] | Always | Complete HTTP headers
 | [headers][http_version] | [http][version] | Always | HTTP version
-| [headers][http_user_agent] | [user_agent][original] | Always | browser user agent
+| [headers][http_user_agent] | [user_agent][original] | Always | client user agent
 | [headers][http_host] | [url][domain] and [url][port] | Always | host domain and port
 | [headers][request_method] | [http][method] | Always | HTTP method
-| [headers][request_path] | [url][path] | Always | query path
-| [headers][content_length] | [http][request][body][bytes] | Always | request content length
-| [headers][content_type] | [http][request][mime_type] | Always | request mime type
+| [headers][request_path] | [url][path] | Always | Query path
+| [headers][content_length] | [http][request][body][bytes] | Always | Request content length
+| [headers][content_type] | [http][request][mime_type] | Always | Request mime type
 |=======================================================================
 
 ==== Blocking Behavior
@@ -144,7 +144,7 @@ The list of ciphers suite to use, listed by priorities.
 * Value type is <<string,string>>
 * Supported values are:
 ** `disabled`: unstructured connection metadata added at root level
-** `v1`: structured header metadata added under `[@metadata][http][header]`
+** `v1`: headers added under `[@metadata][http][header]`. Some are copied to structured ECS fields `http`, `url`, `user_agent` and `host`
 
 Controls this plugin's compatibility with the
 {ecs-ref}[Elastic Common Schema (ECS)].
