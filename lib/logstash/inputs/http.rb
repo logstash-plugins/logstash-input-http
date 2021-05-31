@@ -200,15 +200,15 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     content_length = headers.get("content_length")
     content_type = headers.get("content_type")
 
-    event.set("[http][version]", http_version)
-    event.set("[user_agent][original]", http_user_agent)
-    domain, port = http_host.split(":")
-    event.set("[url][domain]", domain)
-    event.set("[url][port]", port)
-    event.set("[http][method]", request_method)
-    event.set("[url][path]", request_path)
-    event.set("[http][request][body][bytes]", content_length)
-    event.set("[http][request][mime_type]", content_type)
+    event.set("[http][version]", http_version) if http_version
+    event.set("[user_agent][original]", http_user_agent) if http_user_agent
+    domain, colon, port = http_host.rpartition(":")
+    event.set("[url][domain]", domain) if domain
+    event.set("[url][port]", port) if port
+    event.set("[http][method]", request_method) if request_method
+    event.set("[url][path]", request_path) if request_path
+    event.set("[http][request][body][bytes]", content_length) if content_length
+    event.set("[http][request][mime_type]", content_type) if content_type
   end
 
   def validate_ssl_settings!

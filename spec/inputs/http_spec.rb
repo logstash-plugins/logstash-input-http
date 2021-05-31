@@ -301,6 +301,15 @@ describe LogStash::Inputs::Http do
     ecs_compatibility_matrix(:disabled, :v1) do |ecs_select|
       let(:host_field) { ecs_select[disabled: "[host]", v1: "[host][ip]"] }
       let(:header_field) { ecs_select[disabled: "headers", v1: "[@metadata][http][header]"] }
+      let(:http_version_field) { ecs_select[disabled: "[headers][http_version]", v1: "[http][version]"] }
+      let(:user_agent_field) { ecs_select[disabled: "[headers][http_user_agent]", v1: "[user_agent][original]"] }
+      let(:http_host_field) { "[headers][http_host]" }
+      let(:domain_field) { "[url][domain]" }
+      let(:port_field) { "[url][port]" }
+      let(:request_method_field) { ecs_select[disabled: "[headers][request_method]", v1: "[http][method]"] }
+      let(:request_path_field) { ecs_select[disabled: "[headers][request_path]", v1: "[url][path]"] }
+      let(:content_length_field) { ecs_select[disabled: "[headers][content_length]", v1: "[http][request][body][bytes]"] }
+      let(:content_type_field) { ecs_select[disabled: "[headers][content_type]", v1: "[http][request][mime_type]"] }
 
       before :each do
         allow_any_instance_of(described_class).to receive(:ecs_compatibility).and_return(ecs_compatibility)
@@ -342,7 +351,19 @@ describe LogStash::Inputs::Http do
                         :body => "hello").call
             event = logstash_queue.pop
             expect(event.get(header_field)).to be_a(Hash)
-            expect(event.get(header_field)).to include("request_method" => "POST")
+            expect(event.get(request_method_field)).to eq("POST")
+            expect(event.get(request_path_field)).to eq("/meh.json")
+            expect(event.get(http_version_field)).to eq("HTTP/1.1")
+            expect(event.get(user_agent_field)).to include("Manticore")
+            if ecs_compatibility == :disabled
+              expect(event.get(http_host_field)).to eq("localhost:#{port}")
+            else
+              expect(event.get(domain_field)).to eq("localhost")
+              expect(event.get(port_field)).to eq("#{port}")
+            end
+
+            expect(event.get(content_length_field)).to eq("5")
+            expect(event.get(content_type_field)).to eq("text/plain")
           end
         end
         context "when using request_headers_target_field" do
@@ -354,6 +375,12 @@ describe LogStash::Inputs::Http do
             event = logstash_queue.pop
             expect(event.get("request_headers")).to be_a(Hash)
             expect(event.get("request_headers")).to include("request_method" => "POST")
+            expect(event.get("request_headers")).to include("request_path" => "/meh.json")
+            expect(event.get("request_headers")).to include("http_version" => "HTTP/1.1")
+            expect(event.get("request_headers")["http_user_agent"]).to include("Manticore")
+            expect(event.get("request_headers")).to include("http_host" => "localhost:#{port}")
+            expect(event.get("request_headers")).to include("content_length" => "5")
+            expect(event.get("request_headers")).to include("content_type" => "text/plain")
           end
         end
       end
