@@ -359,7 +359,7 @@ describe LogStash::Inputs::Http do
               expect(event.get(http_host_field)).to eq("localhost:#{port}")
             else
               expect(event.get(domain_field)).to eq("localhost")
-              expect(event.get(port_field)).to eq("#{port}")
+              expect(event.get(port_field)).to eq(port)
             end
 
             expect(event.get(content_length_field)).to eq("5")
@@ -412,25 +412,25 @@ describe LogStash::Inputs::Http do
     it "should parse in IPV4 format with port" do
       domain, port = LogStash::Inputs::Http.get_domain_port("#{localhost}:8080")
       expect(domain).to eq(localhost)
-      expect(port).to eq("8080")
+      expect(port).to eq(8080)
     end
 
     it "should parse in IPV4 format without port" do
       domain, port = LogStash::Inputs::Http.get_domain_port(localhost)
       expect(domain).to eq(localhost)
-      expect(port).to eq("80")
+      expect(port).to be_nil
     end
 
     it "should parse in IPV6 format with port" do
       domain, port = LogStash::Inputs::Http.get_domain_port("[#{ipv6}]:8080")
       expect(domain).to eq(ipv6)
-      expect(port).to eq("8080")
+      expect(port).to eq(8080)
     end
 
     it "should parse in IPV6 format without port" do
       domain, port = LogStash::Inputs::Http.get_domain_port("#{ipv6}")
       expect(domain).to eq(ipv6)
-      expect(port).to eq("80")
+      expect(port).to be_nil
     end
   end
 

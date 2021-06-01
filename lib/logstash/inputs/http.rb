@@ -220,9 +220,9 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # return [domain, port]
   def self.get_domain_port(http_host)
     if /^(([^:]+)|\[(.*)\])\:([\d]+)$/ =~ http_host
-      ["#{$2 || $3}", "#{$4}"]
+      ["#{$2 || $3}", $4.to_i]
     else
-      [http_host, "80"]
+      [http_host, nil]
     end
   end
 
