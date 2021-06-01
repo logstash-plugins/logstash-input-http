@@ -35,7 +35,7 @@ describe LogStash::Inputs::Http do
     subject { LogStash::Inputs::Http.new("port" => port) }
 
     before :each do
-      setup_client
+      setup_server_client
     end
 
     describe "handling overflowing requests with a 429" do
@@ -300,7 +300,7 @@ describe LogStash::Inputs::Http do
   describe "ECS support", :ecs_compatibility_support, :aggregate_failures do
     ecs_compatibility_matrix(:disabled, :v1) do |ecs_select|
       let(:host_field) { ecs_select[disabled: "[host]", v1: "[host][ip]"] }
-      let(:header_field) { ecs_select[disabled: "headers", v1: "[@metadata][http][header]"] }
+      let(:header_field) { ecs_select[disabled: "headers", v1: "[@metadata][input][http][request][headers]"] }
       let(:http_version_field) { ecs_select[disabled: "[headers][http_version]", v1: "[http][version]"] }
       let(:user_agent_field) { ecs_select[disabled: "[headers][http_user_agent]", v1: "[user_agent][original]"] }
       let(:http_host_field) { "[headers][http_host]" }
@@ -313,7 +313,7 @@ describe LogStash::Inputs::Http do
 
       before :each do
         allow_any_instance_of(described_class).to receive(:ecs_compatibility).and_return(ecs_compatibility)
-        setup_client
+        setup_server_client
       end
 
       describe "remote host" do
@@ -387,7 +387,8 @@ describe LogStash::Inputs::Http do
     end
   end
 
-  def setup_client
+  # wait until server is ready
+  def setup_server_client
     subject.register
     t = Thread.new { subject.run(logstash_queue) }
     ok = false
@@ -402,6 +403,35 @@ describe LogStash::Inputs::Http do
       sleep 0.01
     end
     logstash_queue.pop if logstash_queue.size == 1 # pop test event
+  end
+
+  describe "parse domain host" do
+    let(:localhost) { "localhost" }
+    let(:ipv6) { "2001:db8::8a2e:370:7334" }
+
+    it "should parse in IPV4 format with port" do
+      domain, port = LogStash::Inputs::Http.parse_domain_port("#{localhost}:8080")
+      expect(domain).to eq(localhost)
+      expect(port).to eq("8080")
+    end
+
+    it "should parse in IPV4 format without port" do
+      domain, port = LogStash::Inputs::Http.parse_domain_port(localhost)
+      expect(domain).to eq(localhost)
+      expect(port).to eq("80")
+    end
+
+    it "should parse in IPV6 format with port" do
+      domain, port = LogStash::Inputs::Http.parse_domain_port("[#{ipv6}]:8080")
+      expect(domain).to eq(ipv6)
+      expect(port).to eq("8080")
+    end
+
+    it "should parse in IPV6 format without port" do
+      domain, port = LogStash::Inputs::Http.parse_domain_port("#{ipv6}")
+      expect(domain).to eq(ipv6)
+      expect(port).to eq("80")
+    end
   end
 
   context "with :ssl => false" do

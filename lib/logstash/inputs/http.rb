@@ -148,7 +148,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     @http_server = create_http_server(message_handler)
 
     @remote_host_target_field ||= ecs_select[disabled: "host", v1: "[host][ip]"]
-    @request_headers_target_field ||= ecs_select[disabled: "headers", v1: "[@metadata][http][header]"]
+    @request_headers_target_field ||= ecs_select[disabled: "headers", v1: "[@metadata][input][http][request][headers]"]
   end # def register
 
   def run(queue)
@@ -193,22 +193,37 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     return if ecs_compatibility == :disabled
 
     http_version = headers.get("http_version")
-    http_user_agent = headers.get("http_user_agent")
-    http_host = headers.get("http_host")
-    request_method = headers.get("request_method")
-    request_path = headers.get("request_path")
-    content_length = headers.get("content_length")
-    content_type = headers.get("content_type")
-
     event.set("[http][version]", http_version) if http_version
+
+    http_user_agent = headers.get("http_user_agent")
     event.set("[user_agent][original]", http_user_agent) if http_user_agent
-    domain, colon, port = http_host.rpartition(":")
+
+    http_host = headers.get("http_host")
+    domain, port = self.class.parse_domain_port(http_host)
     event.set("[url][domain]", domain) if domain
     event.set("[url][port]", port) if port
+
+    request_method = headers.get("request_method")
     event.set("[http][method]", request_method) if request_method
+
+    request_path = headers.get("request_path")
     event.set("[url][path]", request_path) if request_path
+
+    content_length = headers.get("content_length")
     event.set("[http][request][body][bytes]", content_length) if content_length
+
+    content_type = headers.get("content_type")
     event.set("[http][request][mime_type]", content_type) if content_type
+  end
+
+  # match the domain and port in either IPV4, "127.0.0.1:8080", or IPV6, "[2001:db8::8a2e:370:7334]:8080", style
+  # return [domain, port]
+  def self.parse_domain_port(http_host)
+    if /^(([^:]+)|\[(.*)\])\:([\d]+)$/ =~ http_host
+      ["#{$2 || $3}", "#{$4}"]
+    else
+      [http_host, "80"]
+    end
   end
 
   def validate_ssl_settings!
