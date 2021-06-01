@@ -410,25 +410,25 @@ describe LogStash::Inputs::Http do
     let(:ipv6) { "2001:db8::8a2e:370:7334" }
 
     it "should parse in IPV4 format with port" do
-      domain, port = LogStash::Inputs::Http.parse_domain_port("#{localhost}:8080")
+      domain, port = LogStash::Inputs::Http.get_domain_port("#{localhost}:8080")
       expect(domain).to eq(localhost)
       expect(port).to eq("8080")
     end
 
     it "should parse in IPV4 format without port" do
-      domain, port = LogStash::Inputs::Http.parse_domain_port(localhost)
+      domain, port = LogStash::Inputs::Http.get_domain_port(localhost)
       expect(domain).to eq(localhost)
       expect(port).to eq("80")
     end
 
     it "should parse in IPV6 format with port" do
-      domain, port = LogStash::Inputs::Http.parse_domain_port("[#{ipv6}]:8080")
+      domain, port = LogStash::Inputs::Http.get_domain_port("[#{ipv6}]:8080")
       expect(domain).to eq(ipv6)
       expect(port).to eq("8080")
     end
 
     it "should parse in IPV6 format without port" do
-      domain, port = LogStash::Inputs::Http.parse_domain_port("#{ipv6}")
+      domain, port = LogStash::Inputs::Http.get_domain_port("#{ipv6}")
       expect(domain).to eq(ipv6)
       expect(port).to eq("80")
     end

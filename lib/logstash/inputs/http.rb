@@ -199,7 +199,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     event.set("[user_agent][original]", http_user_agent) if http_user_agent
 
     http_host = headers.get("http_host")
-    domain, port = self.class.parse_domain_port(http_host)
+    domain, port = self.class.get_domain_port(http_host)
     event.set("[url][domain]", domain) if domain
     event.set("[url][port]", port) if port
 
@@ -218,7 +218,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   # match the domain and port in either IPV4, "127.0.0.1:8080", or IPV6, "[2001:db8::8a2e:370:7334]:8080", style
   # return [domain, port]
-  def self.parse_domain_port(http_host)
+  def self.get_domain_port(http_host)
     if /^(([^:]+)|\[(.*)\])\:([\d]+)$/ =~ http_host
       ["#{$2 || $3}", "#{$4}"]
     else
