@@ -44,7 +44,7 @@ Here’s how ECS compatibility mode affects output.
 | ECS disabled | ECS v1 | Availability | Description
 
 | [host] | [host][ip] | Always | Host IP address
-| [headers] | [@metadata][http][header] | Always | Complete HTTP headers
+| [headers] | [@metadata][input][http][request][headers] | Always | Complete HTTP headers
 | [headers][http_version] | [http][version] | Always | HTTP version
 | [headers][http_user_agent] | [user_agent][original] | Always | client user agent
 | [headers][http_host] | [url][domain] and [url][port] | Always | host domain and port
