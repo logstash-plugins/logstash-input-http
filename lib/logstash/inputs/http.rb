@@ -3,6 +3,7 @@ require "logstash/inputs/base"
 require "logstash/namespace"
 require "stud/interval"
 require "logstash-input-http_jars"
+require "logstash/plugin_mixins/ecs_compatibility_support"
 
 # Using this input you can receive single or multiline events over http(s).
 # Applications can send a HTTP POST request with a body to the endpoint started by this
@@ -25,6 +26,7 @@ require "logstash-input-http_jars"
 # format]
 #
 class LogStash::Inputs::Http < LogStash::Inputs::Base
+  include LogStash::PluginMixins::ECSCompatibilitySupport(:disabled, :v1, :v8 => :v1)
   require "logstash/inputs/http/tls"
 
   java_import "io.netty.handler.codec.http.HttpUtil"
@@ -104,10 +106,10 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   config :response_headers, :validate => :hash, :default => { 'Content-Type' => 'text/plain' }
 
   # target field for the client host of the http request
-  config :remote_host_target_field, :validate => :string, :default => "host"
+  config :remote_host_target_field, :validate => :string
 
   # target field for the client host of the http request
-  config :request_headers_target_field, :validate => :string, :default => "headers"
+  config :request_headers_target_field, :validate => :string
 
   config :threads, :validate => :number, :required => false, :default => ::LogStash::Config::CpuCoreStrategy.maximum
 
@@ -130,7 +132,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
     validate_ssl_settings!
 
-    if @user && @password then
+    if @user && @password
       token = Base64.strict_encode64("#{@user}:#{@password.value}")
       @auth_token = "Basic #{token}"
     end
@@ -144,6 +146,9 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     require "logstash/inputs/http/message_handler"
     message_handler = MessageHandler.new(self, @codec, @codecs, @auth_token)
     @http_server = create_http_server(message_handler)
+
+    @remote_host_target_field ||= ecs_select[disabled: "host", v1: "[host][ip]"]
+    @request_headers_target_field ||= ecs_select[disabled: "headers", v1: "[@metadata][input][http][request][headers]"]
   end # def register
 
   def run(queue)
@@ -177,10 +182,48 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   end
 
   def push_decoded_event(headers, remote_address, event)
+    add_ecs_fields(headers, event)
     event.set(@request_headers_target_field, headers)
     event.set(@remote_host_target_field, remote_address)
     decorate(event)
     @queue << event
+  end
+
+  def add_ecs_fields(headers, event)
+    return if ecs_compatibility == :disabled
+
+    http_version = headers.get("http_version")
+    event.set("[http][version]", http_version) if http_version
+
+    http_user_agent = headers.get("http_user_agent")
+    event.set("[user_agent][original]", http_user_agent) if http_user_agent
+
+    http_host = headers.get("http_host")
+    domain, port = self.class.get_domain_port(http_host)
+    event.set("[url][domain]", domain) if domain
+    event.set("[url][port]", port) if port
+
+    request_method = headers.get("request_method")
+    event.set("[http][method]", request_method) if request_method
+
+    request_path = headers.get("request_path")
+    event.set("[url][path]", request_path) if request_path
+
+    content_length = headers.get("content_length")
+    event.set("[http][request][body][bytes]", content_length) if content_length
+
+    content_type = headers.get("content_type")
+    event.set("[http][request][mime_type]", content_type) if content_type
+  end
+
+  # match the domain and port in either IPV4, "127.0.0.1:8080", or IPV6, "[2001:db8::8a2e:370:7334]:8080", style
+  # return [domain, port]
+  def self.get_domain_port(http_host)
+    if /^(([^:]+)|\[(.*)\])\:([\d]+)$/ =~ http_host
+      ["#{$2 || $3}", $4.to_i]
+    else
+      [http_host, nil]
+    end
   end
 
   def validate_ssl_settings!

@@ -1,3 +1,6 @@
+## 3.4.0
+ - Add ECS support, mapping Http header to ECS compatible fields [#137](https://github.com/logstash-plugins/logstash-input-http/pull/137)
+
 ## 3.3.7
  - Feat: improved error handling/logging/unwraping [#133](https://github.com/logstash-plugins/logstash-input-http/pull/133)
  

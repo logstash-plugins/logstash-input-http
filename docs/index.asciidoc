@@ -32,6 +32,28 @@ This input can also be used to receive webhook requests to integrate with other 
 and applications. By taking advantage of the vast plugin ecosystem available in Logstash
 you can trigger actionable events right from your application.
 
+[id="plugins-{type}s-{plugin}-ecs_metadata"]
+==== Event Metadata and the Elastic Common Schema (ECS)
+In addition to decoding the events, this input will add HTTP headers containing connection information to each event.
+When ECS compatibility is disabled, the headers are stored in the `headers` field, which has the potential to create confusion and schema conflicts downstream.
+When ECS is enabled, we can ensure a pipeline maintains access to this metadata throughout the event's lifecycle without polluting the top-level namespace.
+
+Here’s how ECS compatibility mode affects output.
+[cols="<l,<l,e,<e"]
+|=======================================================================
+| ECS disabled | ECS v1 | Availability | Description
+
+| [host] | [host][ip] | Always | Host IP address
+| [headers] | [@metadata][input][http][request][headers] | Always | Complete HTTP headers
+| [headers][http_version] | [http][version] | Always | HTTP version
+| [headers][http_user_agent] | [user_agent][original] | Always | client user agent
+| [headers][http_host] | [url][domain] and [url][port] | Always | host domain and port
+| [headers][request_method] | [http][method] | Always | HTTP method
+| [headers][request_path] | [url][path] | Always | Query path
+| [headers][content_length] | [http][request][body][bytes] | Always | Request content length
+| [headers][content_type] | [http][request][mime_type] | Always | Request mime type
+|=======================================================================
+
 ==== Blocking Behavior
 
 The HTTP protocol doesn't deal well with long running requests. This plugin will either return 
@@ -70,6 +92,7 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 |Setting |Input type|Required
 | <<plugins-{type}s-{plugin}-additional_codecs>> |<<hash,hash>>|No
 | <<plugins-{type}s-{plugin}-cipher_suites>> |<<array,array>>|No
+| <<plugins-{type}s-{plugin}-ecs_compatibility>> | <<string,string>>|No
 | <<plugins-{type}s-{plugin}-host>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-keystore>> |<<path,path>>|No
 | <<plugins-{type}s-{plugin}-keystore_password>> |<<password,password>>|No
@@ -114,6 +137,72 @@ and no codec for the request's content-type is found
   * Default value is `java.lang.String[TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256]@459cfcca`
 
 The list of ciphers suite to use, listed by priorities.
+
+[id="plugins-{type}s-{plugin}-ecs_compatibility"]
+===== `ecs_compatibility`
+
+* Value type is <<string,string>>
+* Supported values are:
+** `disabled`: unstructured connection metadata added at root level
+** `v1`: headers added under `[@metadata][http][header]`. Some are copied to structured ECS fields `http`, `url`, `user_agent` and `host`
+
+Controls this plugin's compatibility with the
+{ecs-ref}[Elastic Common Schema (ECS)].
+See <<plugins-{type}s-{plugin}-ecs_metadata>> for detailed information.
+
+Example output:
+
+**Sample output: ECS disabled**
+[source,text]
+-----
+{
+    "@version" => "1",
+    "headers" => {
+           "request_path" => "/twitter/tweet/1",
+            "http_accept" => "*/*",
+           "http_version" => "HTTP/1.1",
+         "request_method" => "PUT",
+              "http_host" => "localhost:8080",
+        "http_user_agent" => "curl/7.64.1",
+         "content_length" => "5",
+           "content_type" => "application/x-www-form-urlencoded"
+    },
+    "@timestamp" => 2021-05-28T19:27:28.609Z,
+    "host" => "127.0.0.1",
+    "message" => "hello"
+}
+-----
+
+**Sample output: ECS enabled**
+[source,text]
+-----
+{
+    "@version" => "1",
+    "user_agent" => {
+        "original" => "curl/7.64.1"
+    },
+    "http" => {
+        "method" => "PUT",
+        "request" => {
+            "mime_type" => "application/x-www-form-urlencoded",
+            "body" => {
+                "bytes" => "5"
+            }
+        },
+        "version" => "HTTP/1.1"
+    },
+    "url" => {
+          "port" => "8080",
+        "domain" => "snmp1",
+          "path" => "/twitter/tweet/1"
+    },
+    "@timestamp" => 2021-05-28T23:32:38.222Z,
+    "host" => {
+        "ip" => "127.0.0.1"
+    },
+    "message" => "hello",
+}
+-----
 
 [id="plugins-{type}s-{plugin}-host"]
 ===== `host` 
@@ -209,7 +298,8 @@ specify a custom set of response headers
 ===== `remote_host_target_field` 
 
   * Value type is <<string,string>>
-  * Default value is `"host"`
+  * Default value is `"host"` when ECS is disabled
+  * Default value is `[host][ip]` when ECS is enabled
 
 specify a target field for the client host of the http request
 
@@ -217,7 +307,8 @@ specify a target field for the client host of the http request
 ===== `request_headers_target_field` 
 
   * Value type is <<string,string>>
-  * Default value is `"headers"`
+  * Default value is `"headers"` when ECS is disabled
+  * Default value is `[@metadata][http][header]` when ECS is enabled
 
 specify target field for the client host of the http request
 
