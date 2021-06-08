@@ -34,9 +34,9 @@ you can trigger actionable events right from your application.
 
 [id="plugins-{type}s-{plugin}-ecs_metadata"]
 ==== Event Metadata and the Elastic Common Schema (ECS)
-In addition to decoding the events, this input will add HTTP headers of the connection to each event.
-When ECS compatibility is disabled, the headers are stored in the `headers` field, which had the potential to create confusion and schema conflicts downstream.
-When ECS is enabled, we can ensure a pipeline still has access to this metadata throughout the event's lifecycle without polluting the top-level namespace.
+In addition to decoding the events, this input will add HTTP headers containing connection information to each event.
+When ECS compatibility is disabled, the headers are stored in the `headers` field, which has the potential to create confusion and schema conflicts downstream.
+When ECS is enabled, we can ensure a pipeline maintains access to this metadata throughout the event's lifecycle without polluting the top-level namespace.
 
 Here’s how ECS compatibility mode affects output.
 [cols="<l,<l,e,<e"]
@@ -152,7 +152,7 @@ See <<plugins-{type}s-{plugin}-ecs_metadata>> for detailed information.
 
 Example output:
 
-ECS disabled
+**Sample output: ECS disabled**
 [source,text]
 -----
 {
@@ -173,7 +173,7 @@ ECS disabled
 }
 -----
 
-ECS enabled
+**Sample output: ECS enabled**
 [source,text]
 -----
 {
