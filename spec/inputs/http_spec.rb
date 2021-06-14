@@ -306,7 +306,7 @@ describe LogStash::Inputs::Http do
       let(:http_host_field) { "[headers][http_host]" }
       let(:domain_field) { "[url][domain]" }
       let(:port_field) { "[url][port]" }
-      let(:request_method_field) { ecs_select[disabled: "[headers][request_method]", v1: "[http][method]"] }
+     let(:request_method_field) { ecs_select[disabled: "[headers][request_method]", v1: "[http][method]"] }
       let(:request_path_field) { ecs_select[disabled: "[headers][request_path]", v1: "[url][path]"] }
       let(:content_length_field) { ecs_select[disabled: "[headers][content_length]", v1: "[http][request][body][bytes]"] }
       let(:content_type_field) { ecs_select[disabled: "[headers][content_type]", v1: "[http][request][mime_type]"] }

@@ -14,7 +14,7 @@ public interface IMessageHandler {
      * @param headers
      * @param body
      */
-    boolean onNewMessage(String remoteAddress, Map<String,String> headers, String body);
+    boolean onNewMessage(String remoteAddress, Map<String,String> headers, byte[] body);
 
     /**
      *

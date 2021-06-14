@@ -22,7 +22,7 @@ public class MessageHandler implements IMessageHandler {
      * @param headers
      * @param body
      */
-    public boolean onNewMessage(String remoteAddress, Map<String,String> headers, String body) {
+    public boolean onNewMessage(String remoteAddress, Map<String,String> headers, byte[] body) {
         logger.debug("onNewMessage");
         return false;
     }

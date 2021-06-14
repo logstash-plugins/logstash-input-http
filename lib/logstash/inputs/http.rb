@@ -143,6 +143,9 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       @codecs[content_type] = LogStash::Plugin.lookup("codec", codec).new
     end
 
+
+    @promtail_input = org.logstash.plugins.inputs.http.promtail.PromtailHandler.new
+
     require "logstash/inputs/http/message_handler"
     message_handler = MessageHandler.new(self, @codec, @codecs, @auth_token)
     @http_server = create_http_server(message_handler)
@@ -167,9 +170,25 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   def decode_body(headers, remote_address, body, default_codec, additional_codecs)
     content_type = headers.fetch("content_type", "")
-    codec = additional_codecs.fetch(HttpUtil.getMimeType(content_type), default_codec)
-    codec.decode(body) { |event| push_decoded_event(headers, remote_address, event) }
-    codec.flush { |event| push_decoded_event(headers, remote_address, event) }
+
+    if (content_type.start_with?("application/x-protobuf"))
+      # events = @promtail_input.decode_str(@promtail_input.toUTF8String(body))
+      events = @promtail_input.decode(body)
+      events.each do |event|
+        ts = event.get("@timestamp")
+        if ts
+          event.put("@timestamp", Time.parse(ts))
+        end
+        push_decoded_event(headers, remote_address, LogStash::Event.new(event), false)
+      end
+    else
+      body_str = body
+      body_str = @promtail_input.toUTF8String(body) if !body.is_a?(String)
+      codec = additional_codecs.fetch(HttpUtil.getMimeType(content_type), default_codec)
+      codec.decode(body_str) { |event| push_decoded_event(headers, remote_address, event) }
+      codec.flush { |event| push_decoded_event(headers, remote_address, event) }
+    end
+
     true
   rescue => e
     @logger.error(
@@ -181,11 +200,19 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     false
   end
 
-  def push_decoded_event(headers, remote_address, event)
-    add_ecs_fields(headers, event)
-    event.set(@request_headers_target_field, headers)
-    event.set(@remote_host_target_field, remote_address)
+  def push_decoded_event(headers, remote_address, event, add_headers=true)
+    add_ecs_fields(headers, event) #this line was edited in ver 3.4.0, this whole segment in cobrick code, revise pls
+    if add_headers
+      event.set(@request_headers_target_field, headers)
+      event.set(@remote_host_target_field, remote_address)
+    end
+    tenant = headers.fetch("tenant", "")
+    tenant = headers.fetch("x_scope_orgid", "") if tenant.empty?
+    if !tenant.empty?
+      event.set("tenant", tenant)
+    end
     decorate(event)
+    @logger.debug("Pushing request to #{remote_address} with headers #{headers} event: #{event}")
     @queue << event
   end
 
