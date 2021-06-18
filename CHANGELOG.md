@@ -1,3 +1,6 @@
+## 3.4.1
+ - Changed jar dependencies to reflect newer versions [#140](https://github.com/logstash-plugins/logstash-input-http/pull/140)
+
 ## 3.4.0
  - Add ECS support, mapping Http header to ECS compatible fields [#137](https://github.com/logstash-plugins/logstash-input-http/pull/137)
 
