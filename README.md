@@ -116,7 +116,7 @@ You can use the same **2.1** method to run your plugin in an installed Logstash 
 
 - Build your plugin gem
 ```sh
-jruby -S gem build logstash-promtail-http-input.gemspec
+gem build logstash-filter-awesome.gemspec
 
 ```
 - Install the plugin from the Logstash home
@@ -124,9 +124,6 @@ jruby -S gem build logstash-promtail-http-input.gemspec
 # Logstash 2.3 and higher
 bin/logstash-plugin install --no-verify
 
-# or locally 
-
-bin/logstash-plugin install --no-verify --local  /path_to_gem/logstash-filter-java_drain_filter-0.1.1.gem
 
 ```
 - Start Logstash and proceed to test the plugin

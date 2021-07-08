@@ -2,9 +2,9 @@ package org.logstash.plugins.inputs.http.promtail;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.Timestamp;
 import org.xerial.snappy.Snappy;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -12,28 +12,33 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import static java.time.format.DateTimeFormatter.ISO_INSTANT;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static java.time.format.DateTimeFormatter.ISO_INSTANT;
+
 public class PromtailHandler {
 
-    // compilation check
-    org.xerial.snappy.SnappyNative a = null;
-
-
-
+    /**
+     * Used in Ruby code to properly decode bytes to Java String.
+     * @param bytes
+     * @return
+     */
     public String toUTF8String(byte[] bytes) {
         return new String(bytes, StandardCharsets.UTF_8);
     }
-    public String toIsoString(byte[] bytes) {
-        return new String(bytes, StandardCharsets.ISO_8859_1);
-    }
 
-    public List<Map<String, String>> decode_str(String payload) throws Exception {
-        return decode(payload.getBytes(StandardCharsets.ISO_8859_1));
-    }
-
+    /**
+     * Decodes Promtail message. See https://github.com/grafana/loki/blob/main/pkg/logproto/logproto.proto
+     * Decodes and return map with fields
+     * - message: log line received from Loki
+     * - @timestamp: ISO-8601 encoded date as String
+     * - *: log labels set by promtail
+     *
+     * @param payload received from Promtail
+     * @return Map with label values consumable by Logstash.
+     * @throws Exception
+     */
     public List<Map<String, String>> decode(byte[] payload) throws Exception {
         byte[] uncompressed = Snappy.uncompress(payload);
         return parseMap(Logproto.PushRequest.parseFrom(uncompressed));
@@ -62,8 +67,17 @@ public class PromtailHandler {
         return out;
     }
 
+    /**
+     * Parses json message to map.
+     *
+     * @param json sting encoded json
+     * @param mapper mapper. Set proper option to handle special cases used in Go (ie. ALLOW_UNQUOTED_FIELD_NAMES)
+     * @return
+     */
     public Map<String, String> parse(String json, ObjectMapper mapper) {
         try {
+            if (json == null || json.isEmpty())
+                return Collections.EMPTY_MAP;
             json = json.replaceAll("=\"", ":\"");
             return mapper.readValue(json, Map.class);
         } catch (JsonProcessingException e) {
@@ -74,6 +88,17 @@ public class PromtailHandler {
         }
     }
 
+    /**
+     * Method used in test only. Timestamp is hardcoded.
+     * Needs refactoring to use it in production:
+     * - hardcoded timestamp
+     * - no labels handling
+     * - minimal Logproto information used
+     *
+     * @param message Log line
+     * @return Snappy-Compressed Loki Logproto. See https://github.com/grafana/loki/blob/main/pkg/logproto/logproto.proto
+     * @throws IOException
+     */
     public String compress(String message) throws IOException {
         Logproto.PushRequest pushRequest = Logproto.PushRequest.newBuilder()
                 .addStreams(Logproto.StreamAdapter.newBuilder().addEntries(
@@ -84,14 +109,24 @@ public class PromtailHandler {
         return new String(Snappy.compress(pushRequest.toByteArray()), StandardCharsets.ISO_8859_1);
     }
 
-    public List<Byte> convertBytesToList(byte[] bytes) {
-        final List<Byte> list = new ArrayList<>();
-        for (byte b : bytes) {
-            list.add(b);
-        }
-        return list;
-    }
-
+    /**
+     * To support snappy-compressed http request in tests.
+     * Sets the following request properties:
+     * - Loki standard protobuf protocol. See https://github.com/grafana/loki/blob/main/pkg/logproto/logproto.proto
+     *  Content-Type: application/x-protobuf
+     * - Loki tenant separation. See https://grafana.com/docs/loki/latest/operations/multi-tenancy/
+     *  X-Scope-OrgID: tenant
+     * - POST to Loki push endpoint. See https://grafana.com/docs/loki/latest/api/#post-lokiapiv1push
+     *
+     * Needs refactoring to use it in production code.
+     * compress(...) method uses hardoced timestamp value
+     *
+     * @param uri
+     * @param message
+     * @param tenant
+     * @return
+     * @throws IOException
+     */
     public String sendLogHttp(String uri, String message, String tenant) throws IOException {
 
         String ret = "OK";

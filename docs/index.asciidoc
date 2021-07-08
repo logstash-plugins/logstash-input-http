@@ -298,7 +298,7 @@ specify a custom set of response headers
 ===== `remote_host_target_field` 
 
   * Value type is <<string,string>>
-    * Default value is `"host"` when ECS is disabled
+  * Default value is `"host"` when ECS is disabled
   * Default value is `[host][ip]` when ECS is enabled
 
 specify a target field for the client host of the http request
