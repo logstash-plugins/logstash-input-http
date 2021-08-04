@@ -41,7 +41,7 @@ When ECS is enabled, we can ensure a pipeline maintains access to this metadata 
 Here’s how ECS compatibility mode affects output.
 [cols="<l,<l,e,<e"]
 |=======================================================================
-| ECS disabled | ECS v1 | Availability | Description
+| ECS `disabled` | ECS `v1`,`v8` | Availability | Description
 
 | [host] | [host][ip] | Always | Host IP address
 | [headers] | [@metadata][input][http][request][headers] | Always | Complete HTTP headers
@@ -144,7 +144,7 @@ The list of ciphers suite to use, listed by priorities.
 * Value type is <<string,string>>
 * Supported values are:
 ** `disabled`: unstructured connection metadata added at root level
-** `v1`: headers added under `[@metadata][http][header]`. Some are copied to structured ECS fields `http`, `url`, `user_agent` and `host`
+** `v1`,`v8`: headers added under `[@metadata][http][header]`. Some are copied to structured ECS fields `http`, `url`, `user_agent` and `host`
 
 Controls this plugin's compatibility with the
 {ecs-ref}[Elastic Common Schema (ECS)].
