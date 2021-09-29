@@ -1,5 +1,5 @@
 ## 3.4.2
- - Docs: added `v8` as an acceptible value for `ecs_compatibility`
+ - Docs: added `v8` as an acceptable value for `ecs_compatibility` [#142](https://github.com/logstash-plugins/logstash-input-http/pull/142)
 
 ## 3.4.1
  - Changed jar dependencies to reflect newer versions [#140](https://github.com/logstash-plugins/logstash-input-http/pull/140)
