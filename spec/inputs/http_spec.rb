@@ -21,6 +21,10 @@ describe LogStash::Inputs::Http do
   let(:logstash_queue) { Queue.new }
   let(:port) { rand(5000) + 1025 }
 
+  let(:config) { { "port" => port } }
+
+  subject { described_class.new(config) }
+
   it_behaves_like "an interruptible input plugin" do
     let(:config) { { "port" => port } }
   end
@@ -32,7 +36,6 @@ describe LogStash::Inputs::Http do
   end
 
   describe "request handling" do
-    subject { LogStash::Inputs::Http.new("port" => port) }
 
     before :each do
       setup_server_client
@@ -49,7 +52,7 @@ describe LogStash::Inputs::Http do
         "socket_timeout" => 0.1
       } }
 
-      subject { described_class.new("port" => port, "threads" => threads, "max_pending_requests" => max_pending_requests) }
+      let(:config) { { "port" => port, "threads" => threads, "max_pending_requests" => max_pending_requests } }
 
       context "when sending more requests than queue slots" do
         it "should block when the queue is full" do
@@ -74,7 +77,7 @@ describe LogStash::Inputs::Http do
     end
 
     context "with default codec" do
-      subject { LogStash::Inputs::Http.new("port" => port) }
+
       context "when receiving a text/plain request" do
         it "should process the request normally" do
           client.post("http://127.0.0.1:#{port}/meh.json",
@@ -84,6 +87,7 @@ describe LogStash::Inputs::Http do
           expect(event.get("message")).to eq("hello")
         end
       end
+
       context "when receiving a deflate compressed text/plain request" do
         it "should process the request normally" do
           client.post("http://127.0.0.1:#{port}/meh.json",
@@ -93,16 +97,18 @@ describe LogStash::Inputs::Http do
           expect(event.get("message")).to eq("hello")
         end
       end
+
       context "when receiving a deflate text/plain request that cannot be decompressed" do
         let(:response) do
-          response = client.post("http://127.0.0.1:#{port}/meh.json",
-                                 :headers => { "content-type" => "text/plain", "content-encoding" => "deflate" },
-                                   :body => "hello").call
+          client.post("http://127.0.0.1:#{port}/meh.json",
+                      :headers => { "content-type" => "text/plain", "content-encoding" => "deflate" },
+                      :body => "hello").call
         end
         it "should respond with 400" do
           expect(response.code).to eq(400)
         end
       end
+
       context "when receiving a gzip compressed text/plain request" do
         it "should process the request normally" do
           wio = StringIO.new("w")
@@ -118,6 +124,7 @@ describe LogStash::Inputs::Http do
           expect(event.get("message")).to eq("hello")
         end
       end
+
       context "when receiving a gzip text/plain request that cannot be decompressed" do
         let(:response) do
           client.post("http://127.0.0.1:#{port}",
@@ -128,6 +135,7 @@ describe LogStash::Inputs::Http do
           expect(response.code).to eq(400)
         end
       end
+
       context "when receiving an application/json request" do
         it "should parse the json body" do
           client.post("http://127.0.0.1:#{port}/meh.json",
@@ -140,16 +148,21 @@ describe LogStash::Inputs::Http do
     end
 
     context "with json codec" do
-      subject { LogStash::Inputs::Http.new("port" => port, "codec" => "json") }
+      let(:config) { super().merge("codec" => "json") }
+      let(:response) do
+        client.post("http://127.0.0.1:#{port}/meh.json", :body => { "message" => "Hello" }.to_json).call
+      end
+
       it "should parse the json body" do
-        response = client.post("http://127.0.0.1:#{port}/meh.json", :body => { "message" => "Hello" }.to_json).call
+        expect(response.code).to eq(200)
         event = logstash_queue.pop
         expect(event.get("message")).to eq("Hello")
       end
+
     end
 
     context "with json_lines codec without final delimiter" do
-      subject { LogStash::Inputs::Http.new("port" => port, "codec" => "json_lines") }
+      let(:config) { super().merge("codec" => "json_lines") }
       let(:line1) { '{"foo": 1}' }
       let(:line2) { '{"foo": 2}' }
       it "should parse all json_lines in body including last one" do
