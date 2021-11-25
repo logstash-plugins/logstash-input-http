@@ -20,6 +20,7 @@ describe LogStash::Inputs::Http do
   let(:client_options) { { } }
   let(:logstash_queue) { Queue.new }
   let(:port) { rand(5000) + 1025 }
+  let(:url) { "http://127.0.0.1:#{port}" }
 
   let(:config) { { "port" => port } }
 
@@ -149,14 +150,50 @@ describe LogStash::Inputs::Http do
 
     context "with json codec" do
       let(:config) { super().merge("codec" => "json") }
+      let(:url) { "http://127.0.0.1:#{port}/meh.json" }
       let(:response) do
-        client.post("http://127.0.0.1:#{port}/meh.json", :body => { "message" => "Hello" }.to_json).call
+        client.post(url, :body => { "message" => "Hello" }.to_json).call
       end
 
       it "should parse the json body" do
         expect(response.code).to eq(200)
         event = logstash_queue.pop
         expect(event.get("message")).to eq("Hello")
+      end
+
+      context 'with ssl' do
+
+        let(:url) { super().sub('http://', 'https://') }
+
+        certs_dir = File.expand_path('../fixtures/certs/generated', File.dirname(__FILE__))
+
+        let(:config) do
+          super().merge 'ssl' => true,
+                      'ssl_certificate_authorities' => [ File.join(certs_dir, 'root.crt') ],
+                      'ssl_certificate' => File.join(certs_dir, 'server_from_root.crt'),
+                      'ssl_key' => File.join(certs_dir, 'server_from_root.key.pkcs8'),
+                      'ssl_verify_mode' => 'peer'
+        end
+
+        let(:client_options) do
+          super().merge ssl: {
+              verify: false,
+              ca_file: File.join(certs_dir, 'root.crt'),
+              client_cert: File.join(certs_dir, 'client_from_root.crt'),
+              client_key: File.join(certs_dir, 'client_from_root.key.pkcs8'),
+          }
+        end
+
+        it "should parse the json body" do
+          # [DEBUG][io.netty.handler.ssl.SslHandler] [id: 0xcaf869ff, L:/127.0.0.1:5610 - R:/127.0.0.1:32890] HANDSHAKEN: protocol:TLSv1.2 cipher suite:TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+          # [DEBUG][org.apache.http.conn.ssl.SSLConnectionSocketFactory] Secure session established
+          # [DEBUG][org.apache.http.conn.ssl.SSLConnectionSocketFactory]  negotiated protocol: TLSv1.2
+          # [DEBUG][org.apache.http.conn.ssl.SSLConnectionSocketFactory]  negotiated cipher suite: TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+          expect(response.code).to eq(200)
+          event = logstash_queue.pop
+          expect(event.get("message")).to eq("Hello")
+        end
+
       end
 
     end
@@ -401,15 +438,17 @@ describe LogStash::Inputs::Http do
   end
 
   # wait until server is ready
-  def setup_server_client
+  def setup_server_client(url = self.url)
     subject.register
-    t = Thread.new { subject.run(logstash_queue) }
+    t = Thread.start { subject.run(logstash_queue) }
     ok = false
     until ok
       begin
-        client.post("http://127.0.0.1:#{port}", :body => '{}').call
-      rescue => e
-        # retry
+        client.post(url, :body => '{}').call
+      rescue Manticore::SocketException => e
+        puts "retry client.post due #{e}" if $VERBOSE
+      rescue Manticore::ManticoreException => e
+        warn e.inspect
       else
         ok = true
       end
