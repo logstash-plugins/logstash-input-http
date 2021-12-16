@@ -1,3 +1,6 @@
+## 3.4.4
+ - Update log4j dependency to 2.16.0
+
 ## 3.4.3
  - Update log4j dependency to 2.15.0
  - Fix: update to Gradle 7 [#145](https://github.com/logstash-plugins/logstash-input-http/pull/145)
