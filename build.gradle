@@ -10,7 +10,7 @@ version rootProject.file('VERSION').text.trim()
 
 description = "HTTP Input Netty implementation"
 
-String log4jVersion = '2.16.0'
+String log4jVersion = '2.17.0'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
