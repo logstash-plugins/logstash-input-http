@@ -1,5 +1,5 @@
 ## 3.4.4
- - Update log4j dependency to 2.16.0
+ - Update log4j dependency to 2.17.0
 
 ## 3.4.3
  - Update log4j dependency to 2.15.0
