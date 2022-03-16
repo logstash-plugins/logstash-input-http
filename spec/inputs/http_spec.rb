@@ -194,6 +194,34 @@ describe LogStash::Inputs::Http do
           expect(event.get("message")).to eq("Hello")
         end
 
+        context 'with TLSv1.3 client' do
+
+          let(:client_options) do
+            super().tap do |opts|
+              opts.fetch(:ssl).merge! protocols: ['TLSv1.3']
+            end
+          end
+
+          it "should parse the json body xxx" do
+            expect(response.code).to eq(200)
+            event = logstash_queue.pop
+            expect(event.get("message")).to eq("Hello")
+          end
+
+          context 'enforced TLSv1.3 in plugin' do
+
+            let(:config) { super().merge 'tls_min_version' => '1.3' }
+
+            it "should parse the json body xxx" do
+              expect(response.code).to eq(200)
+              event = logstash_queue.pop
+              expect(event.get("message")).to eq("Hello")
+            end
+
+          end
+
+        end
+
       end
 
     end
@@ -449,6 +477,7 @@ describe LogStash::Inputs::Http do
         puts "retry client.post due #{e}" if $VERBOSE
       rescue Manticore::ManticoreException => e
         warn e.inspect
+        raise e.cause ? e.cause : e
       else
         ok = true
       end
