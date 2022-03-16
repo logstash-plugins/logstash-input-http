@@ -357,7 +357,7 @@ Time in milliseconds for an incomplete ssl handshake to timeout
   * There is no default value for this setting.
 
 SSL key to use.
-NOTE: This key need to be in the PKCS8 format, you can convert it with https://www.openssl.org/docs/man1.1.0/apps/pkcs8.html[OpenSSL]
+NOTE: This key need to be in the PKCS8 format, you can convert it with https://www.openssl.org/docs/man1.1.1/man1/openssl-pkcs8.html[OpenSSL]
 for more information.
 
 [id="plugins-{type}s-{plugin}-ssl_key_passphrase"]
