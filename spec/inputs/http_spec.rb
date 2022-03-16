@@ -194,6 +194,8 @@ describe LogStash::Inputs::Http do
           expect(event.get("message")).to eq("Hello")
         end
 
+        TLS13_AVAILABLE = (javax.net.ssl.SSLContext.getInstance('TLSv1.3') && true) rescue false
+
         context 'with TLSv1.3 client' do
 
           let(:client_options) do
@@ -202,7 +204,7 @@ describe LogStash::Inputs::Http do
             end
           end
 
-          it "should parse the json body xxx" do
+          it "should parse the json body" do
             expect(response.code).to eq(200)
             event = logstash_queue.pop
             expect(event.get("message")).to eq("Hello")
@@ -212,7 +214,7 @@ describe LogStash::Inputs::Http do
 
             let(:config) { super().merge 'tls_min_version' => '1.3' }
 
-            it "should parse the json body xxx" do
+            it "should parse the json body" do
               expect(response.code).to eq(200)
               event = logstash_queue.pop
               expect(event.get("message")).to eq("Hello")
@@ -220,7 +222,7 @@ describe LogStash::Inputs::Http do
 
           end
 
-        end
+        end if TLS13_AVAILABLE
 
       end
 
