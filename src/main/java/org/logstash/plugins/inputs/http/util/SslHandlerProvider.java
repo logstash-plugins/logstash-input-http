@@ -22,7 +22,7 @@ public class SslHandlerProvider {
         NONE
     }
 
-    private String[] protocols = new String[] { "TLSv1.2" };
+    private String[] protocols = new String[] { "TLSv1.2", "TLSv1.3" };
 
     public SslHandlerProvider(SslContext sslContext) {
         this.sslContext = sslContext;
@@ -58,7 +58,7 @@ public class SslHandlerProvider {
     }
 
     public void setProtocols(String[] protocols) {
-        if(logger.isDebugEnabled())
+        if (logger.isDebugEnabled())
             logger.debug("TLS: " + Arrays.toString(protocols));
 
         this.protocols = protocols;

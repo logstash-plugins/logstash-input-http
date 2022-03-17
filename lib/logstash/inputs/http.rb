@@ -87,11 +87,11 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   config :ssl_handshake_timeout, :validate => :number, :default => 10000
 
   # The minimum TLS version allowed for the encrypted connections. The value must be one of the following:
-  # 1.0 for TLS 1.0, 1.1 for TLS 1.1, 1.2 for TLS 1.2
+  # 1.0 for TLS 1.0, 1.1 for TLS 1.1, 1.2 for TLS 1.2, 1.3 for TLS 1.3
   config :tls_min_version, :validate => :number, :default => TLS.min.version
 
   # The maximum TLS version allowed for the encrypted connections. The value must be the one of the following:
-  # 1.0 for TLS 1.0, 1.1 for TLS 1.1, 1.2 for TLS 1.2
+  # 1.0 for TLS 1.0, 1.1 for TLS 1.1, 1.2 for TLS 1.2, 1.3 for TLS 1.3
   config :tls_max_version, :validate => :number, :default => TLS.max.version
 
   # The list of ciphers suite to use, listed by priorities.
