@@ -631,8 +631,7 @@ describe LogStash::Inputs::Http do
 
       context "with invalid ssl certificate_authorities" do
         let(:config) do
-          super().merge("ssl_verify_mode" => "peer",
-                      "ssl_certificate_authorities" => [ ssc.certificate.path, ssc.private_key.path ])
+          super().merge("ssl_verify_mode" => "peer", "ssl_certificate_authorities" => [ ssc.certificate.path, ssc.private_key.path ])
         end
 
         it "should raise a cert error" do
