@@ -194,14 +194,14 @@ describe LogStash::Inputs::Http do
           expect(event.get("message")).to eq("Hello")
         end
 
-        TLS13_AVAILABLE = begin
-                            context = javax.net.ssl.SSLContext.getInstance('TLS')
-                            context.init nil, nil, nil
-                            context.getDefaultSSLParameters.getProtocols.include? 'TLSv1.3'
-                          rescue => e
-                            warn "failed to detect TLSv1.3 support: #{e.inspect}"
-                            nil
-                          end
+        TLS13_ENABLED_BY_DEFAULT = begin
+                                     context = javax.net.ssl.SSLContext.getInstance('TLS')
+                                     context.init nil, nil, nil
+                                     context.getDefaultSSLParameters.getProtocols.include? 'TLSv1.3'
+                                   rescue => e
+                                     warn "failed to detect TLSv1.3 support: #{e.inspect}"
+                                     nil
+                                   end
 
         context 'with TLSv1.3 client' do
 
@@ -229,7 +229,7 @@ describe LogStash::Inputs::Http do
 
           end
 
-        end if TLS13_AVAILABLE
+        end if TLS13_ENABLED_BY_DEFAULT
 
       end
 
