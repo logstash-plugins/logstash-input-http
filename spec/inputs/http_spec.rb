@@ -194,7 +194,14 @@ describe LogStash::Inputs::Http do
           expect(event.get("message")).to eq("Hello")
         end
 
-        TLS13_AVAILABLE = (javax.net.ssl.SSLContext.getInstance('TLSv1.3') && true) rescue false
+        TLS13_AVAILABLE = begin
+                            context = javax.net.ssl.SSLContext.getInstance('TLS')
+                            context.init nil, nil, nil
+                            context.getDefaultSSLParameters.getProtocols.include? 'TLSv1.3'
+                          rescue => e
+                            warn "failed to detect TLSv1.3 support: #{e.inspect}"
+                            nil
+                          end
 
         context 'with TLSv1.3 client' do
 
@@ -212,7 +219,7 @@ describe LogStash::Inputs::Http do
 
           context 'enforced TLSv1.3 in plugin' do
 
-            let(:config) { super().merge 'tls_min_version' => '1.3' }
+            let(:config) { super().merge 'tls_min_version' => '1.3', 'cipher_suites' => [ 'TLS_AES_128_GCM_SHA256' ] }
 
             it "should parse the json body" do
               expect(response.code).to eq(200)
@@ -249,7 +256,7 @@ describe LogStash::Inputs::Http do
         body = { "message" => "Hello" }.to_json
         client.post("http://127.0.0.1:#{port}/meh.json",
                     :headers => { "content-type" => "application/json" },
-                      :body => body).call
+                    :body => body).call
         event = logstash_queue.pop
         expect(event.get("message")).to eq(body)
       end
