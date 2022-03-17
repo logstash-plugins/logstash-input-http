@@ -31,7 +31,7 @@ public class SslSimpleBuilder implements SslBuilder {
     ));
 
     /*
-    Modern Ciphers Compatibility List from https://wiki.mozilla.org/Security/Server_Side_TLS
+    Ciphers Compatibility List from https://wiki.mozilla.org/Security/Server_Side_TLS
     */
     private final static String[] DEFAULT_CIPHERS;
     static {
