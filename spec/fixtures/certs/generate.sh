@@ -23,12 +23,8 @@ openssl genrsa -out client_from_root.key 4096
 openssl req -new -key client_from_root.key -out client_from_root.csr -subj "/C=LS/ST=NA/L=Http Input/O=Logstash/CN=client" -config ../openssl.cnf
 openssl x509 -req -extensions client_cert -extfile ../openssl.cnf -days 1096 -in client_from_root.csr -CA root.crt -CAkey root.key -set_serial 04 -out client_from_root.crt
 
-# create server chain pems.
-#cat server_from_root.crt > server_from_root.chain.crt
-
 # verify :allthethings
 openssl verify -CAfile root.crt server_from_root.crt
-#openssl verify -CAfile root.crt server_from_root.chain.crt
 
 # create pkcs8 versions of all keys
 openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in client_from_root.key -out client_from_root.key.pkcs8
