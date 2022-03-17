@@ -1,4 +1,4 @@
-## 3.4.6
+## 3.5.0
  - Feat: TLSv1.3 support [#146](https://github.com/logstash-plugins/logstash-input-http/pull/146)
 
 ## 3.4.5
