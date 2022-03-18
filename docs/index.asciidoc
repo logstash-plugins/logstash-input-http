@@ -136,9 +136,10 @@ and no codec for the request's content-type is found
   * Value type is <<array,array>>
   * Default value is `[TLS_AES_128_GCM_SHA256, TLS_AES_256_GCM_SHA384, TLS_CHACHA20_POLY1305_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256, TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256, TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256]`
 
-The list of ciphers suite to use, listed by priorities.
-The default values applies for OpenJDK 11.0.14 and higher, for older versions the list does not include suites
-not supported by the JDK, such as the ChaCha20 family of ciphers.
+The list of cipher suites to use, listed by priorities.
+This default list applies for OpenJDK 11.0.14 and higher.
+For older JDK versions, the default list includes only suites supported by that version.
+For example, the ChaCha20 family of ciphers is not supported in older versions.
 
 [id="plugins-{type}s-{plugin}-ecs_compatibility"]
 ===== `ecs_compatibility`
