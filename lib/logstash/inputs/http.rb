@@ -95,7 +95,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   config :tls_max_version, :validate => :number, :default => TLS.max.version
 
   # The list of ciphers suite to use, listed by priorities.
-  config :cipher_suites, :validate => :array, :default => org.logstash.plugins.inputs.http.util.SslSimpleBuilder.getDefaultCiphers
+  config :ssl_cipher_suites, :validate => :array, :default => org.logstash.plugins.inputs.http.util.SslSimpleBuilder.getDefaultCiphers
 
   # Apply specific codecs for specific content types.
   # The default codec will be applied only after this list is checked
@@ -124,8 +124,8 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   config :keystore, :validate => :path, :deprecated => "Set 'ssl_certificate' and 'ssl_key' instead."
   config :keystore_password, :validate => :password, :deprecated => "Set 'ssl_key_passphrase' instead."
 
-  config :verify_mode, :validate => ['none', 'peer', 'force_peer'], :default => 'none',
-     :deprecated => "Set 'ssl_verify_mode' instead."
+  config :verify_mode, :validate => ['none', 'peer', 'force_peer'], :default => 'none', :deprecated => "Set 'ssl_verify_mode' instead."
+  config :cipher_suites, :validate => :array, :default => [], :deprecated => "Set 'ssl_cipher_suites' instead."
 
   public
   def register
@@ -245,10 +245,18 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       @ssl_verify_mode_final = @ssl_verify_mode
     end
 
+    if @ssl && (original_params.key?('cipher_suites') && original_params.key?('ssl_cipher_suites'))
+      raise LogStash::ConfigurationError, "Both `ssl_cipher_suites` and (deprecated) `cipher_suites` were set. Use only `ssl_cipher_suites`."
+    elsif original_params.key?('cipher_suites')
+      @ssl_cipher_suites_final = @cipher_suites
+    else
+      @ssl_cipher_suites_final = @ssl_cipher_suites
+    end
+
     if @ssl && require_certificate_authorities? && !client_authentication?
-      raise LogStash::ConfigurationError, "Using `ssl_verify_mode` or `verify_mode` set to PEER or FORCE_PEER, requires the configuration of `ssl_certificate_authorities`"
+      raise LogStash::ConfigurationError, "Using `ssl_verify_mode` (or `verify_mode`) set to PEER or FORCE_PEER, requires the configuration of `ssl_certificate_authorities`"
     elsif @ssl && !require_certificate_authorities? && client_authentication?
-      raise LogStash::ConfigurationError, "The configuration of `ssl_certificate_authorities` requires setting `ssl_verify_mode` or `verify_mode` to PEER or FORCE_PEER"
+      raise LogStash::ConfigurationError, "The configuration of `ssl_certificate_authorities` requires setting `ssl_verify_mode` (or `verify_mode`) to PEER or FORCE_PEER"
     end
   end
 
@@ -266,7 +274,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       begin
         ssl_builder = org.logstash.plugins.inputs.http.util.SslSimpleBuilder
                           .new(@ssl_certificate, @ssl_key, @ssl_key_passphrase.nil? ? nil : @ssl_key_passphrase.value)
-                          .setCipherSuites(normalized_ciphers)
+                          .setCipherSuites(normalized_cipher_suites)
       rescue java.lang.IllegalArgumentException => e
         @logger.error("SSL configuration invalid", error_details(e))
         raise LogStash::ConfigurationError, e
@@ -298,8 +306,8 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   private
 
-  def normalized_ciphers
-    @cipher_suites.map(&:upcase)
+  def normalized_cipher_suites
+    @ssl_cipher_suites_final.map(&:upcase)
   end
 
   def convert_protocols
