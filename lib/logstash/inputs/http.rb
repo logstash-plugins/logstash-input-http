@@ -236,11 +236,9 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     end
 
     if @ssl && (original_params.key?("verify_mode") && original_params.key?("ssl_verify_mode"))
-        raise LogStash::ConfigurationError, "Both 'ssl_verify_mode' and 'verify_mode' were set. Use only 'ssl_verify_mode'."
+      raise LogStash::ConfigurationError, "Both `ssl_verify_mode` and (deprecated) `verify_mode` were set. Use only `ssl_verify_mode`."
     elsif original_params.key?("verify_mode")
       @ssl_verify_mode_final = @verify_mode
-    elsif original_params.key?("ssl_verify_mode")
-      @ssl_verify_mode_final = @ssl_verify_mode
     else
       @ssl_verify_mode_final = @ssl_verify_mode
     end
