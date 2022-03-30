@@ -382,6 +382,23 @@ for more information.
 
 SSL key passphrase to use.
 
+[id="plugins-{type}s-{plugin}-ssl_supported_protocols"]
+===== `ssl_supported_protocols`
+
+  * Value type is <<string,string>>
+  * Allowed values are: `'TLSv1.1'`, `'TLSv1.2'`, `'TLSv1.3'`
+  * Default depends on the JDK being used. With up-to-date Logstash, the default is `['TLSv1.2', 'TLSv1.3']`.
+    `'TLSv1.1'` is not considered secure and is only provided for legacy applications.
+
+List of allowed SSL/TLS versions to use when establishing a connection to the HTTP endpoint.
+
+For Java 8 `'TLSv1.3'` is supported  only since **8u262** (AdoptOpenJDK), but requires that you set the
+`LS_JAVA_OPTS="-Djdk.tls.client.protocols=TLSv1.3"` system property in Logstash.
+
+NOTE: If you configure the plugin to use `'TLSv1.1'` on any recent JVM, such as the one packaged with Logstash,
+the protocol is disabled by default and needs to be enabled manually by changing `jdk.tls.disabledAlgorithms` in
+the *$JDK_HOME/conf/security/java.security* configuration file. That is, `TLSv1.1` needs to be removed from the list.
+
 [id="plugins-{type}s-{plugin}-ssl_verify_mode"]
 ===== `ssl_verify_mode` 
 
@@ -410,7 +427,7 @@ Number of threads to use for both accepting connections and handling requests
 ===== `tls_max_version` 
 
   * Value type is <<number,number>>
-  * Default value is `1.3`
+  * This option is deprecated
 
 The maximum TLS version allowed for the encrypted connections.
 The value must be the one of the following: 1.1 for TLS 1.1, 1.2 for TLS 1.2, 1.3 for TLSv1.3
@@ -419,7 +436,7 @@ The value must be the one of the following: 1.1 for TLS 1.1, 1.2 for TLS 1.2, 1.
 ===== `tls_min_version` 
 
   * Value type is <<number,number>>
-  * Default value is `1.2`
+  * This option is deprecated
 
 The minimum TLS version allowed for the encrypted connections.
 The value must be one of the following: 1.1 for TLS 1.1, 1.2 for TLS 1.2, 1.3 for TLSv1.3
