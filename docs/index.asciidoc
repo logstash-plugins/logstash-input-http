@@ -104,9 +104,11 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 | <<plugins-{type}s-{plugin}-ssl>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-ssl_certificate>> |a valid filesystem path|No
 | <<plugins-{type}s-{plugin}-ssl_certificate_authorities>> |<<array,array>>|No
+| <<plugins-{type}s-{plugin}-ssl_cipher_suites>> |<<array,array>>|No
 | <<plugins-{type}s-{plugin}-ssl_handshake_timeout>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-ssl_key>> |a valid filesystem path|No
 | <<plugins-{type}s-{plugin}-ssl_key_passphrase>> |<<password,password>>|No
+| <<plugins-{type}s-{plugin}-ssl_supported_protocols>> |<<array,array>>|No
 | <<plugins-{type}s-{plugin}-ssl_verify_mode>> |<<string,string>>, one of `["none", "peer", "force_peer"]`|No
 | <<plugins-{type}s-{plugin}-threads>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-tls_max_version>> |<<number,number>>|No
@@ -144,10 +146,10 @@ Use `ssl_cipher_suites` instead.
 [id="plugins-{type}s-{plugin}-ecs_compatibility"]
 ===== `ecs_compatibility`
 
-* Value type is <<string,string>>
-* Supported values are:
-** `disabled`: unstructured connection metadata added at root level
-** `v1`,`v8`: headers added under `[@metadata][http][header]`. Some are copied to structured ECS fields `http`, `url`, `user_agent` and `host`
+  * Value type is <<string,string>>
+  * Supported values are:
+    ** `disabled`: unstructured connection metadata added at root level
+    ** `v1`,`v8`: headers added under `[@metadata][http][header]`. Some are copied to structured ECS fields `http`, `url`, `user_agent` and `host`
 
 Controls this plugin's compatibility with the
 {ecs-ref}[Elastic Common Schema (ECS)].
@@ -385,7 +387,7 @@ SSL key passphrase to use.
 [id="plugins-{type}s-{plugin}-ssl_supported_protocols"]
 ===== `ssl_supported_protocols`
 
-  * Value type is <<string,string>>
+  * Value type is <<array,array>>
   * Allowed values are: `'TLSv1.1'`, `'TLSv1.2'`, `'TLSv1.3'`
   * Default depends on the JDK being used. With up-to-date Logstash, the default is `['TLSv1.2', 'TLSv1.3']`.
     `'TLSv1.1'` is not considered secure and is only provided for legacy applications.
