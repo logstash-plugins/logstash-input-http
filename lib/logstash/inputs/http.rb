@@ -30,6 +30,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   require "logstash/inputs/http/tls"
 
   java_import "io.netty.handler.codec.http.HttpUtil"
+  java_import 'org.logstash.plugins.inputs.http.util.SslSimpleBuilder'
 
   config_name "http"
 
@@ -86,16 +87,11 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # Time in milliseconds for an incomplete ssl handshake to timeout
   config :ssl_handshake_timeout, :validate => :number, :default => 10000
 
-  # The minimum TLS version allowed for the encrypted connections. The value must be one of the following:
-  # 1.0 for TLS 1.0, 1.1 for TLS 1.1, 1.2 for TLS 1.2, 1.3 for TLS 1.3
-  config :tls_min_version, :validate => :number, :default => TLS.min.version
-
-  # The maximum TLS version allowed for the encrypted connections. The value must be the one of the following:
-  # 1.0 for TLS 1.0, 1.1 for TLS 1.1, 1.2 for TLS 1.2, 1.3 for TLS 1.3
-  config :tls_max_version, :validate => :number, :default => TLS.max.version
-
   # The list of ciphers suite to use, listed by priorities.
-  config :ssl_cipher_suites, :validate => :array, :default => org.logstash.plugins.inputs.http.util.SslSimpleBuilder.getDefaultCiphers
+  config :ssl_cipher_suites, :validate => SslSimpleBuilder::SUPPORTED_CIPHERS.to_a,
+                             :default => SslSimpleBuilder.getDefaultCiphers, :list => true
+
+  config :ssl_supported_protocols, :validate => ['TLSv1.1', 'TLSv1.2', 'TLSv1.3'], :default => ['TLSv1.2', 'TLSv1.3'], :list => true
 
   # Apply specific codecs for specific content types.
   # The default codec will be applied only after this list is checked
@@ -118,6 +114,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   config :max_content_length, :validate => :number, :required => false, :default => 100 * 1024 * 1024
 
   config :response_code, :validate => [200, 201, 202, 204], :default => 200
+
   # Deprecated options
 
   # The JKS keystore to validate the client's certificates
@@ -126,6 +123,14 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   config :verify_mode, :validate => ['none', 'peer', 'force_peer'], :default => 'none', :deprecated => "Set 'ssl_verify_mode' instead."
   config :cipher_suites, :validate => :array, :default => [], :deprecated => "Set 'ssl_cipher_suites' instead."
+
+  # The minimum TLS version allowed for the encrypted connections. The value must be one of the following:
+  # 1.0 for TLS 1.0, 1.1 for TLS 1.1, 1.2 for TLS 1.2, 1.3 for TLS 1.3
+  config :tls_min_version, :validate => :number, :deprecated => "Set 'ssl_supported_protocols' instead."
+
+  # The maximum TLS version allowed for the encrypted connections. The value must be the one of the following:
+  # 1.0 for TLS 1.0, 1.1 for TLS 1.1, 1.2 for TLS 1.2, 1.3 for TLS 1.3
+  config :tls_max_version, :validate => :number, :deprecated => "Set 'ssl_supported_protocols' instead."
 
   public
   def register
@@ -251,6 +256,18 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       @ssl_cipher_suites_final = @ssl_cipher_suites
     end
 
+    if @ssl && (original_params.key?('tls_min_version') && original_params.key?('ssl_supported_protocols'))
+      raise LogStash::ConfigurationError, "Both `ssl_supported_protocols` and (deprecated) `tls_min_ciphers` were set. Use only `ssl_supported_protocols`."
+    elsif @ssl && (original_params.key?('tls_max_version') && original_params.key?('ssl_supported_protocols'))
+      raise LogStash::ConfigurationError, "Both `ssl_supported_protocols` and (deprecated) `tls_max_ciphers` were set. Use only `ssl_supported_protocols`."
+    else
+      if @ssl && (original_params.key?('tls_min_version') || original_params.key?('tls_max_version'))
+        @ssl_supported_protocols_final = TLS.get_supported(tls_min_version..tls_max_version).map(&:name)
+      else
+        @ssl_supported_protocols_final = @ssl_supported_protocols
+      end
+    end
+
     if @ssl && require_certificate_authorities? && !client_authentication?
       raise LogStash::ConfigurationError, "Using `ssl_verify_mode` (or `verify_mode`) set to PEER or FORCE_PEER, requires the configuration of `ssl_certificate_authorities`"
     elsif @ssl && !require_certificate_authorities? && client_authentication?
@@ -308,15 +325,11 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     @ssl_cipher_suites_final.map(&:upcase)
   end
 
-  def convert_protocols
-    TLS.get_supported(@tls_min_version..@tls_max_version).map(&:name)
-  end
-
   def new_ssl_handshake_provider(ssl_builder)
     begin
       ssl_handler_provider = org.logstash.plugins.inputs.http.util.SslHandlerProvider.new(ssl_builder.build())
       ssl_handler_provider.setVerifyMode(@ssl_verify_mode_final.upcase)
-      ssl_handler_provider.setProtocols(convert_protocols)
+      ssl_handler_provider.setProtocols(@ssl_supported_protocols_final)
       ssl_handler_provider.setHandshakeTimeoutMilliseconds(@ssl_handshake_timeout)
       ssl_handler_provider
     rescue java.lang.IllegalArgumentException => e

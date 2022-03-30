@@ -169,10 +169,10 @@ describe LogStash::Inputs::Http do
 
         let(:config) do
           super().merge 'ssl' => true,
-                      'ssl_certificate_authorities' => [ File.join(certs_dir, 'root.crt') ],
-                      'ssl_certificate' => File.join(certs_dir, 'server_from_root.crt'),
-                      'ssl_key' => File.join(certs_dir, 'server_from_root.key.pkcs8'),
-                      'ssl_verify_mode' => 'peer'
+                        'ssl_certificate_authorities' => [ File.join(certs_dir, 'root.crt') ],
+                        'ssl_certificate' => File.join(certs_dir, 'server_from_root.crt'),
+                        'ssl_key' => File.join(certs_dir, 'server_from_root.key.pkcs8'),
+                        'ssl_verify_mode' => 'peer'
         end
 
         let(:client_options) do
@@ -219,7 +219,21 @@ describe LogStash::Inputs::Http do
 
           context 'enforced TLSv1.3 in plugin' do
 
-            let(:config) { super().merge 'tls_min_version' => '1.3', 'cipher_suites' => [ 'TLS_AES_128_GCM_SHA256' ] }
+            let(:config) { super().merge 'ssl_supported_protocols' => ['TLSv1.3'],
+                                         'ssl_cipher_suites' => [ 'TLS_AES_128_GCM_SHA256' ] }
+
+            it "should parse the json body" do
+              expect(response.code).to eq(200)
+              event = logstash_queue.pop
+              expect(event.get("message")).to eq("Hello")
+            end
+
+          end
+
+          context 'enforced TLSv1.3 (deprecated options)' do
+
+            let(:config) { super().merge 'tls_min_version' => '1.3',
+                                         'cipher_suites' => [ 'TLS_AES_128_GCM_SHA256' ] }
 
             it "should parse the json body" do
               expect(response.code).to eq(200)
@@ -537,6 +551,12 @@ describe LogStash::Inputs::Http do
         expect { subject.register }.to raise_exception(LogStash::ConfigurationError)
       end
     end
+    context "with invalid cipher suites" do
+      it "should raise a configuration error" do
+        invalid_config = config.merge("ssl_cipher_suites" => "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA38")
+        expect { LogStash::Inputs::Http.new(invalid_config) }.to raise_error(LogStash::ConfigurationError)
+      end
+    end
     context "with :ssl_certificate" do
       let(:ssc) { SelfSignedCertificate.new }
       let(:ssl_certificate) { ssc.certificate }
@@ -595,18 +615,6 @@ describe LogStash::Inputs::Http do
         end
       end
 
-      context "with invalid cipher_suites" do
-        let(:config) { super().merge("cipher_suites" => "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA38") }
-
-        it "should raise a configuration error" do
-          expect( subject.logger ).to receive(:error) do |msg, opts|
-            expect( msg ).to match /.*?configuration invalid/
-            expect( opts[:message] ).to match /TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA38.*? not available/
-          end
-          expect { subject.register }.to raise_error(LogStash::ConfigurationError)
-        end
-      end
-
       context "with invalid ssl certificate" do
         before do
           cert = File.readlines path = config["ssl_certificate"]
@@ -651,6 +659,47 @@ describe LogStash::Inputs::Http do
           rescue Java::JavaSecurityCert::CertificateParsingException
             :pass
           end
+        end
+      end
+
+      context "with both verify_mode options set" do
+        let(:config) do
+          super().merge('ssl_verify_mode' => 'peer', 'verify_mode' => 'none')
+        end
+
+        it "should raise a configuration error" do
+          expect { subject.register }.to raise_error LogStash::ConfigurationError, /Use only .?ssl_verify_mode.?/i
+        end
+      end
+
+      context "with ssl_cipher_suites and cipher_suites set" do
+        let(:config) do
+          super().merge('ssl_cipher_suites' => ['TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384'],
+                        'cipher_suites' => ['TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384'])
+        end
+
+        it "should raise a configuration error" do
+          expect { subject.register }.to raise_error LogStash::ConfigurationError, /Use only .?ssl_cipher_suites.?/i
+        end
+      end
+
+      context "with ssl_supported_protocols and tls_min_version set" do
+        let(:config) do
+          super().merge('ssl_supported_protocols' => ['TLSv1.2'], 'tls_min_version' => 1.0)
+        end
+
+        it "should raise a configuration error" do
+          expect { subject.register }.to raise_error LogStash::ConfigurationError, /Use only .?ssl_supported_protocols.?/i
+        end
+      end
+
+      context "with ssl_supported_protocols and tls_max_version set" do
+        let(:config) do
+          super().merge('ssl_supported_protocols' => ['TLSv1.2'], 'tls_max_version' => 1.2)
+        end
+
+        it "should raise a configuration error" do
+          expect { subject.register }.to raise_error LogStash::ConfigurationError, /Use only .?ssl_supported_protocols.?/i
         end
       end
 

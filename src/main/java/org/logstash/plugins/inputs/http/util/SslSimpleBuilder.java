@@ -26,7 +26,7 @@ public class SslSimpleBuilder implements SslBuilder {
 
     private final static Logger logger = LogManager.getLogger(SslSimpleBuilder.class);
 
-    static final Set<String> SUPPORTED_CIPHERS = new HashSet<>(Arrays.asList(
+    public static final Set<String> SUPPORTED_CIPHERS = new HashSet<>(Arrays.asList(
         ((SSLServerSocketFactory) SSLServerSocketFactory.getDefault()).getSupportedCipherSuites()
     ));
 
