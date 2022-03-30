@@ -232,7 +232,7 @@ describe LogStash::Inputs::Http do
 
           context 'enforced TLSv1.3 (deprecated options)' do
 
-            let(:config) { super().merge 'tls_min_version' => '1.3',
+            let(:config) { super().merge 'tls_min_version' => 1.3,
                                          'cipher_suites' => [ 'TLS_AES_128_GCM_SHA256' ] }
 
             it "should parse the json body" do

@@ -126,11 +126,11 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   # The minimum TLS version allowed for the encrypted connections. The value must be one of the following:
   # 1.0 for TLS 1.0, 1.1 for TLS 1.1, 1.2 for TLS 1.2, 1.3 for TLS 1.3
-  config :tls_min_version, :validate => :number, :deprecated => "Set 'ssl_supported_protocols' instead."
+  config :tls_min_version, :validate => :number, :default => TLS.min.version, :deprecated => "Set 'ssl_supported_protocols' instead."
 
   # The maximum TLS version allowed for the encrypted connections. The value must be the one of the following:
   # 1.0 for TLS 1.0, 1.1 for TLS 1.1, 1.2 for TLS 1.2, 1.3 for TLS 1.3
-  config :tls_max_version, :validate => :number, :deprecated => "Set 'ssl_supported_protocols' instead."
+  config :tls_max_version, :validate => :number, :default => TLS.max.version, :deprecated => "Set 'ssl_supported_protocols' instead."
 
   public
   def register
