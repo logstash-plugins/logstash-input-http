@@ -127,6 +127,8 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   config :verify_mode, :validate => ['none', 'peer', 'force_peer'], :default => 'none',
      :deprecated => "Set 'ssl_verify_mode' instead."
 
+  attr_reader :codecs
+
   public
   def register
 

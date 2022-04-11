@@ -656,23 +656,62 @@ describe LogStash::Inputs::Http do
 
     end
   end
-end
+end if false
 
 # If we have a setting called `pipeline.ecs_compatibility`, we need to
 # ensure that our additional_codecs are instantiated with the proper
 # execution context in order to ensure that the pipeline setting is
 # respected.
 if LogStash::SETTINGS.registered?('pipeline.ecs_compatibility')
+
+  def with_setting(name, value, &block)
+    setting = LogStash::SETTINGS.get_setting(name)
+    was_set, orignial_value = setting.set?, setting.value
+    setting.set(value)
+
+    yield(true)
+
+  ensure
+    was_set ? setting.set(orignial_value) : setting.reset
+  end
+
+  def setting_value_supported?(name, value)
+    with_setting(name, value) { true }
+  rescue
+    false
+  end
+
   describe LogStash::Inputs::Http do
     context 'additional_codecs' do
       let(:port) { rand(1025...5000) }
+
+      %w(disabled v1 v8).each do |spec|
+        if setting_value_supported?('pipeline.ecs_compatibility', spec)
+          context "with `pipeline.ecs_compatibility: #{spec}`" do
+            around(:each) { |example| with_setting('pipeline.ecs_compatibility', spec, &example) }
+
+            it 'propagates the ecs_compatibility pipeline setting to the additional_codecs' do
+              input("input { http { port => #{port} additional_codecs => { 'application/json' => 'json' 'text/plain' => 'plain' } } }") do |pipeline, queue|
+                http_input = pipeline.inputs.first
+                expect(http_input).to be_a_kind_of(described_class) # precondition
+
+                http_input.codecs.each do |key, value|
+                  aggregate_failures("Codec for `#{key}`") do
+                    expect(value.ecs_compatibility).to eq(spec.to_sym)
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
 
       it 'propagates the execution context from the input to the codecs' do
         input("input { http { port => #{port} } }") do |pipeline, queue|
           http_input = pipeline.inputs.first
           expect(http_input).to be_a_kind_of(described_class) # precondition
 
-          http_input.instance_variable_get(:@codecs).each do |key, value|
+          http_input.codecs.each do |key, value|
             aggregate_failures("Codec for `#{key}`") do
               expect(value.execution_context).to be http_input.execution_context
             end
