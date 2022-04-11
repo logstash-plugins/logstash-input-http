@@ -140,7 +140,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     @codecs = Hash.new
 
     @additional_codecs.each do |content_type, codec|
-      @codecs[content_type] = LogStash::Plugin.lookup("codec", codec).new
+      @codecs[content_type] = initialize_codec(codec)
     end
 
     require "logstash/inputs/http/message_handler"
@@ -331,6 +331,13 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       error_details[:cause][:backtrace] = cause.backtrace if trace || @logger.debug?
     end
     error_details
+  end
+
+  def initialize_codec(codec_name)
+    codec_klass = LogStash::Plugin.lookup("codec", codec_name)
+    return codec_klass.new unless defined?(::LogStash::Plugins::Contextualizer)
+
+    ::LogStash::Plugins::Contextualizer.initialize_plugin(execution_context, codec_klass)
   end
 
 end # class LogStash::Inputs::Http

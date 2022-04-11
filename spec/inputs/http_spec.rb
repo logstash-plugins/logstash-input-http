@@ -657,3 +657,28 @@ describe LogStash::Inputs::Http do
     end
   end
 end
+
+# If we have a setting called `pipeline.ecs_compatibility`, we need to
+# ensure that our additional_codecs are instantiated with the proper
+# execution context in order to ensure that the pipeline setting is
+# respected.
+if LogStash::SETTINGS.registered?('pipeline.ecs_compatibility')
+  describe LogStash::Inputs::Http do
+    context 'additional_codecs' do
+      let(:port) { rand(1025...5000) }
+
+      it 'propagates the execution context from the input to the codecs' do
+        input("input { http { port => #{port} } }") do |pipeline, queue|
+          http_input = pipeline.inputs.first
+          expect(http_input).to be_a_kind_of(described_class) # precondition
+
+          http_input.instance_variable_get(:@codecs).each do |key, value|
+            aggregate_failures("Codec for `#{key}`") do
+              expect(value.execution_context).to be http_input.execution_context
+            end
+          end
+        end
+      end
+    end
+  end
+end
