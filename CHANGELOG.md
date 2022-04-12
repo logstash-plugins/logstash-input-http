@@ -1,3 +1,6 @@
+## 3.5.1
+ - Fix: codecs provided with `additional_codecs` now correctly run in the pipeline's context, which means that they respect the `pipeline.ecs_compatibility` setting [#152](https://github.com/logstash-plugins/logstash-input-http/pull/152)
+
 ## 3.5.0
  - Feat: TLSv1.3 support [#146](https://github.com/logstash-plugins/logstash-input-http/pull/146)
 
