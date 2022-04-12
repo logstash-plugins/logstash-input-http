@@ -656,7 +656,7 @@ describe LogStash::Inputs::Http do
 
     end
   end
-end if false
+end
 
 # If we have a setting called `pipeline.ecs_compatibility`, we need to
 # ensure that our additional_codecs are instantiated with the proper
