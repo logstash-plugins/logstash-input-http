@@ -337,9 +337,11 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   def initialize_codec(codec_name)
     codec_klass = LogStash::Plugin.lookup("codec", codec_name)
-    return codec_klass.new unless defined?(::LogStash::Plugins::Contextualizer)
-
-    ::LogStash::Plugins::Contextualizer.initialize_plugin(execution_context, codec_klass)
+    if defined?(::LogStash::Plugins::Contextualizer)
+      ::LogStash::Plugins::Contextualizer.initialize_plugin(execution_context, codec_klass)
+    else
+      codec_klass.new 
+    end
   end
 
 end # class LogStash::Inputs::Http
