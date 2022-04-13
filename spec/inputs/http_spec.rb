@@ -656,7 +656,7 @@ describe LogStash::Inputs::Http do
 
     end
   end
-end if false
+end
 
 # If we have a setting called `pipeline.ecs_compatibility`, we need to
 # ensure that our additional_codecs are instantiated with the proper
@@ -664,19 +664,11 @@ end if false
 # respected.
 if LogStash::SETTINGS.registered?('pipeline.ecs_compatibility')
 
-  def with_setting(name, value, &block)
-    setting = LogStash::SETTINGS.get_setting(name)
-    was_set, orignial_value = setting.set?, setting.value
-    setting.set(value)
-
-    yield(true)
-
-  ensure
-    was_set ? setting.set(orignial_value) : setting.reset
-  end
-
   def setting_value_supported?(name, value)
-    with_setting(name, value) { true }
+    setting = ::LogStash::SETTINGS.clone.get_setting(name)
+    setting.set(value)
+    setting.validate_value
+    true
   rescue
     false
   end
@@ -688,12 +680,32 @@ if LogStash::SETTINGS.registered?('pipeline.ecs_compatibility')
       %w(disabled v1 v8).each do |spec|
         if setting_value_supported?('pipeline.ecs_compatibility', spec)
           context "with `pipeline.ecs_compatibility: #{spec}`" do
-            around(:each) { |example| with_setting('pipeline.ecs_compatibility', spec, &example) }
+            # Override DevUtils's `new_pipeline` default to inject pipeline settings that
+            # are different than our global settings, so that we can validate the condition
+            # where pipeline settings override global settings.
+            def new_pipeline(config_parts, pipeline_id = :main, settings = pipeline_settings)
+              super(config_parts, pipeline_id, settings)
+            end
+
+            let(:pipeline_settings) do
+              ::LogStash::SETTINGS.clone.tap do |s|
+                s.set('pipeline.ecs_compatibility', spec)
+              end
+            end
 
             it 'propagates the ecs_compatibility pipeline setting to the additional_codecs' do
+              # Ensure plugins pick up pipeline-level setting over the global default.
+              aggregate_failures('precondition') do
+                expect(::LogStash::SETTINGS).to_not be_set('pipeline.ecs_compatibility')
+                expect(pipeline_settings).to be_set('pipeline.ecs_compatibility')
+              end
+
               input("input { http { port => #{port} additional_codecs => { 'application/json' => 'json' 'text/plain' => 'plain' } } }") do |pipeline, queue|
                 http_input = pipeline.inputs.first
-                expect(http_input).to be_a_kind_of(described_class) # precondition
+                aggregate_failures('initialization precondition') do
+                  expect(http_input).to be_a_kind_of(described_class)
+                  expect(http_input.execution_context&.pipeline&.settings&.to_hash).to eq(pipeline_settings.to_hash)
+                end
 
                 http_input.codecs.each do |key, value|
                   aggregate_failures("Codec for `#{key}`") do
