@@ -238,11 +238,12 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       @logger.warn("SSL Certificate will not be used") if @ssl_certificate
       @logger.warn("SSL Key will not be used") if @ssl_key
       @logger.warn("SSL Java Key Store will not be used") if @keystore
+      return # code bellow assumes `ssl => true`
     elsif !(ssl_key_configured? || ssl_jks_configured?)
       raise LogStash::ConfigurationError, "Certificate or JKS must be configured"
     end
 
-    if @ssl && (original_params.key?("verify_mode") && original_params.key?("ssl_verify_mode"))
+    if original_params.key?("verify_mode") && original_params.key?("ssl_verify_mode")
       raise LogStash::ConfigurationError, "Both `ssl_verify_mode` and (deprecated) `verify_mode` were set. Use only `ssl_verify_mode`."
     elsif original_params.key?("verify_mode")
       @ssl_verify_mode_final = @verify_mode
@@ -250,7 +251,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       @ssl_verify_mode_final = @ssl_verify_mode
     end
 
-    if @ssl && (original_params.key?('cipher_suites') && original_params.key?('ssl_cipher_suites'))
+    if original_params.key?('cipher_suites') && original_params.key?('ssl_cipher_suites')
       raise LogStash::ConfigurationError, "Both `ssl_cipher_suites` and (deprecated) `cipher_suites` were set. Use only `ssl_cipher_suites`."
     elsif original_params.key?('cipher_suites')
       @ssl_cipher_suites_final = @cipher_suites
@@ -258,21 +259,21 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       @ssl_cipher_suites_final = @ssl_cipher_suites
     end
 
-    if @ssl && (original_params.key?('tls_min_version') && original_params.key?('ssl_supported_protocols'))
+    if original_params.key?('tls_min_version') && original_params.key?('ssl_supported_protocols')
       raise LogStash::ConfigurationError, "Both `ssl_supported_protocols` and (deprecated) `tls_min_ciphers` were set. Use only `ssl_supported_protocols`."
-    elsif @ssl && (original_params.key?('tls_max_version') && original_params.key?('ssl_supported_protocols'))
+    elsif original_params.key?('tls_max_version') && original_params.key?('ssl_supported_protocols')
       raise LogStash::ConfigurationError, "Both `ssl_supported_protocols` and (deprecated) `tls_max_ciphers` were set. Use only `ssl_supported_protocols`."
     else
-      if @ssl && (original_params.key?('tls_min_version') || original_params.key?('tls_max_version'))
+      if original_params.key?('tls_min_version') || original_params.key?('tls_max_version')
         @ssl_supported_protocols_final = TLS.get_supported(tls_min_version..tls_max_version).map(&:name)
       else
         @ssl_supported_protocols_final = @ssl_supported_protocols
       end
     end
 
-    if @ssl && require_certificate_authorities? && !client_authentication?
+    if require_certificate_authorities? && !client_authentication?
       raise LogStash::ConfigurationError, "Using `ssl_verify_mode` (or `verify_mode`) set to PEER or FORCE_PEER, requires the configuration of `ssl_certificate_authorities`"
-    elsif @ssl && !require_certificate_authorities? && client_authentication?
+    elsif !require_certificate_authorities? && client_authentication?
       raise LogStash::ConfigurationError, "The configuration of `ssl_certificate_authorities` requires setting `ssl_verify_mode` (or `verify_mode`) to PEER or FORCE_PEER"
     end
   end
