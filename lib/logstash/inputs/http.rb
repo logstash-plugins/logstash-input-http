@@ -239,7 +239,9 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       @logger.warn("SSL Key will not be used") if @ssl_key
       @logger.warn("SSL Java Key Store will not be used") if @keystore
       return # code bellow assumes `ssl => true`
-    elsif !(ssl_key_configured? || ssl_jks_configured?)
+    end
+
+    if !(ssl_key_configured? || ssl_jks_configured?)
       raise LogStash::ConfigurationError, "Certificate or JKS must be configured"
     end
 
