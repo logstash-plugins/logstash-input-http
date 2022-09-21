@@ -189,9 +189,15 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   end
 
   def push_decoded_event(headers, remote_address, event)
-    add_ecs_fields(headers, event)
-    event.set(@request_headers_target_field, headers)
-    event.set(@remote_host_target_field, remote_address)
+    skip_enrichment = event.get("skip_enrichment")
+    if !skip_enrichment
+      add_ecs_fields(headers, event)
+      event.set(@request_headers_target_field, headers)
+      event.set(@remote_host_target_field, remote_address)
+    end
+    event_hash = event.to_hash
+    event_hash.delete("skip_enrichment")
+    event = LogStash::Event.new(event_hash)
     decorate(event)
     @queue << event
   end
