@@ -499,6 +499,7 @@ describe LogStash::Inputs::Http do
         event_hash = event.to_hash
         expect(event.get("message")).to eq("hello")
         expect(event_hash.keys).to eq([:@timesamp, :@version, :message])
+      end
     end
   end
 
