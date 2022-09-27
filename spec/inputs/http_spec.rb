@@ -413,7 +413,7 @@ describe LogStash::Inputs::Http do
           let(:content_length_field) { ecs_select[disabled: "[headers][content_length]", v1: "[http][request][body][bytes]"] }
           let(:content_type_field) { ecs_select[disabled: "[headers][content_type]", v1: "[http][request][mime_type]"] }
 
-          before :each do
+          before :each do 
             allow_any_instance_of(described_class).to receive(:ecs_compatibility).and_return(ecs_compatibility)
             setup_server_client
           end
@@ -490,15 +490,19 @@ describe LogStash::Inputs::Http do
       end
     end
     context "disabled" do
+      before :each do
+        setup_server_client
+      end
+      subject { LogStash::Inputs::Http.new(config.merge("port" => port)) }
+      let(:config) { { "add_header_metadata" => false } }
       it "metadata is not added" do
-        let(:config) { { "add_metadata_header" => false} }
-        client.post("http://127.0.0.1:#{port}/meh.json",
+        client.post("http://localhost:#{port}/meh.json",
                     :headers => { "content-type" => "text/plain" },
                     :body => "hello").call
         event = logstash_queue.pop
         event_hash = event.to_hash
         expect(event.get("message")).to eq("hello")
-        expect(event_hash.keys).to eq([:@timesamp, :@version, :message])
+        expect(event_hash.keys).to match_array(["@version", "@timestamp", "message"])
       end
     end
   end
