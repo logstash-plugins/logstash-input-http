@@ -115,6 +115,8 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   config :response_code, :validate => [200, 201, 202, 204], :default => 200
 
+  config :add_header_metadata, :validate => :boolean, :required => false, :default => true
+
   # Deprecated options
 
   # The JKS keystore to validate the client's certificates
@@ -189,15 +191,11 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   end
 
   def push_decoded_event(headers, remote_address, event)
-    skip_enrichment = event.get("skip_enrichment")
-    if !skip_enrichment
+    if add_header_metadata
       add_ecs_fields(headers, event)
       event.set(@request_headers_target_field, headers)
       event.set(@remote_host_target_field, remote_address)
     end
-    event_hash = event.to_hash
-    event_hash.delete("skip_enrichment")
-    event = LogStash::Event.new(event_hash)
     decorate(event)
     @queue << event
   end

@@ -397,94 +397,108 @@ describe LogStash::Inputs::Http do
       end
     end
   end
+  describe "Header Metadata handling" do
+    context "enabled" do
+      describe "ECS support", :ecs_compatibility_support, :aggregate_failures do
+        ecs_compatibility_matrix(:disabled, :v1) do |ecs_select|
+          let(:host_field) { ecs_select[disabled: "[host]", v1: "[host][ip]"] }
+          let(:header_field) { ecs_select[disabled: "headers", v1: "[@metadata][input][http][request][headers]"] }
+          let(:http_version_field) { ecs_select[disabled: "[headers][http_version]", v1: "[http][version]"] }
+          let(:user_agent_field) { ecs_select[disabled: "[headers][http_user_agent]", v1: "[user_agent][original]"] }
+          let(:http_host_field) { "[headers][http_host]" }
+          let(:domain_field) { "[url][domain]" }
+          let(:port_field) { "[url][port]" }
+          let(:request_method_field) { ecs_select[disabled: "[headers][request_method]", v1: "[http][method]"] }
+          let(:request_path_field) { ecs_select[disabled: "[headers][request_path]", v1: "[url][path]"] }
+          let(:content_length_field) { ecs_select[disabled: "[headers][content_length]", v1: "[http][request][body][bytes]"] }
+          let(:content_type_field) { ecs_select[disabled: "[headers][content_type]", v1: "[http][request][mime_type]"] }
 
-  describe "ECS support", :ecs_compatibility_support, :aggregate_failures do
-    ecs_compatibility_matrix(:disabled, :v1) do |ecs_select|
-      let(:host_field) { ecs_select[disabled: "[host]", v1: "[host][ip]"] }
-      let(:header_field) { ecs_select[disabled: "headers", v1: "[@metadata][input][http][request][headers]"] }
-      let(:http_version_field) { ecs_select[disabled: "[headers][http_version]", v1: "[http][version]"] }
-      let(:user_agent_field) { ecs_select[disabled: "[headers][http_user_agent]", v1: "[user_agent][original]"] }
-      let(:http_host_field) { "[headers][http_host]" }
-      let(:domain_field) { "[url][domain]" }
-      let(:port_field) { "[url][port]" }
-      let(:request_method_field) { ecs_select[disabled: "[headers][request_method]", v1: "[http][method]"] }
-      let(:request_path_field) { ecs_select[disabled: "[headers][request_path]", v1: "[url][path]"] }
-      let(:content_length_field) { ecs_select[disabled: "[headers][content_length]", v1: "[http][request][body][bytes]"] }
-      let(:content_type_field) { ecs_select[disabled: "[headers][content_type]", v1: "[http][request][mime_type]"] }
-
-      before :each do
-        allow_any_instance_of(described_class).to receive(:ecs_compatibility).and_return(ecs_compatibility)
-        setup_server_client
-      end
-
-      describe "remote host" do
-        subject { LogStash::Inputs::Http.new(config.merge("port" => port)) }
-        context "by default" do
-          let(:config) { {} }
-          it "is written to the \"host\" field" do
-            client.post("http://localhost:#{port}/meh.json",
-                        :headers => { "content-type" => "text/plain" },
-                        :body => "hello").call
-            event = logstash_queue.pop
-            expect(event.get(host_field)).to eq("127.0.0.1")
+          before :each do
+            allow_any_instance_of(described_class).to receive(:ecs_compatibility).and_return(ecs_compatibility)
+            setup_server_client
           end
-        end
 
-        context "when using remote_host_target_field" do
-          let(:config) { { "remote_host_target_field" => "remote_host" } }
-          it "is written to the value of \"remote_host_target_field\" property" do
-            client.post("http://localhost:#{port}/meh.json",
-                        :headers => { "content-type" => "text/plain" },
-                        :body => "hello").call
-            event = logstash_queue.pop
-            expect(event.get("remote_host")).to eq("127.0.0.1")
-          end
-        end
-      end
-
-      describe "request headers" do
-        subject { LogStash::Inputs::Http.new(config.merge("port" => port)) }
-        context "by default" do
-          let(:config) { {} }
-          it "are written to the \"headers\" field" do
-            client.post("http://localhost:#{port}/meh.json",
-                        :headers => { "content-type" => "text/plain" },
-                        :body => "hello").call
-            event = logstash_queue.pop
-            expect(event.get(header_field)).to be_a(Hash)
-            expect(event.get(request_method_field)).to eq("POST")
-            expect(event.get(request_path_field)).to eq("/meh.json")
-            expect(event.get(http_version_field)).to eq("HTTP/1.1")
-            expect(event.get(user_agent_field)).to include("Manticore")
-            if ecs_compatibility == :disabled
-              expect(event.get(http_host_field)).to eq("localhost:#{port}")
-            else
-              expect(event.get(domain_field)).to eq("localhost")
-              expect(event.get(port_field)).to eq(port)
+          describe "remote host" do
+            subject { LogStash::Inputs::Http.new(config.merge("port" => port)) }
+            context "by default" do
+              let(:config) { {} }
+              it "is written to the \"host\" field" do
+                client.post("http://localhost:#{port}/meh.json",
+                            :headers => { "content-type" => "text/plain" },
+                            :body => "hello").call
+                event = logstash_queue.pop
+                expect(event.get(host_field)).to eq("127.0.0.1")
+              end
             end
 
-            expect(event.get(content_length_field)).to eq("5")
-            expect(event.get(content_type_field)).to eq("text/plain")
+            context "when using remote_host_target_field" do
+              let(:config) { { "remote_host_target_field" => "remote_host" } }
+              it "is written to the value of \"remote_host_target_field\" property" do
+                client.post("http://localhost:#{port}/meh.json",
+                            :headers => { "content-type" => "text/plain" },
+                            :body => "hello").call
+                event = logstash_queue.pop
+                expect(event.get("remote_host")).to eq("127.0.0.1")
+              end
+            end
           end
-        end
-        context "when using request_headers_target_field" do
-          let(:config) { { "request_headers_target_field" => "request_headers" } }
-          it "are written to the field set in \"request_headers_target_field\"" do
-            client.post("http://localhost:#{port}/meh.json",
-                        :headers => { "content-type" => "text/plain" },
-                        :body => "hello").call
-            event = logstash_queue.pop
-            expect(event.get("request_headers")).to be_a(Hash)
-            expect(event.get("request_headers")).to include("request_method" => "POST")
-            expect(event.get("request_headers")).to include("request_path" => "/meh.json")
-            expect(event.get("request_headers")).to include("http_version" => "HTTP/1.1")
-            expect(event.get("request_headers")["http_user_agent"]).to include("Manticore")
-            expect(event.get("request_headers")).to include("http_host" => "localhost:#{port}")
-            expect(event.get("request_headers")).to include("content_length" => "5")
-            expect(event.get("request_headers")).to include("content_type" => "text/plain")
+
+          describe "request headers" do
+            subject { LogStash::Inputs::Http.new(config.merge("port" => port)) }
+            context "by default" do
+              let(:config) { {} }
+              it "are written to the \"headers\" field" do
+                client.post("http://localhost:#{port}/meh.json",
+                            :headers => { "content-type" => "text/plain" },
+                            :body => "hello").call
+                event = logstash_queue.pop
+                expect(event.get(header_field)).to be_a(Hash)
+                expect(event.get(request_method_field)).to eq("POST")
+                expect(event.get(request_path_field)).to eq("/meh.json")
+                expect(event.get(http_version_field)).to eq("HTTP/1.1")
+                expect(event.get(user_agent_field)).to include("Manticore")
+                if ecs_compatibility == :disabled
+                  expect(event.get(http_host_field)).to eq("localhost:#{port}")
+                else
+                  expect(event.get(domain_field)).to eq("localhost")
+                  expect(event.get(port_field)).to eq(port)
+                end
+
+                expect(event.get(content_length_field)).to eq("5")
+                expect(event.get(content_type_field)).to eq("text/plain")
+              end
+            end
+            context "when using request_headers_target_field" do
+              let(:config) { { "request_headers_target_field" => "request_headers" } }
+              it "are written to the field set in \"request_headers_target_field\"" do
+                client.post("http://localhost:#{port}/meh.json",
+                            :headers => { "content-type" => "text/plain" },
+                            :body => "hello").call
+                event = logstash_queue.pop
+                expect(event.get("request_headers")).to be_a(Hash)
+                expect(event.get("request_headers")).to include("request_method" => "POST")
+                expect(event.get("request_headers")).to include("request_path" => "/meh.json")
+                expect(event.get("request_headers")).to include("http_version" => "HTTP/1.1")
+                expect(event.get("request_headers")["http_user_agent"]).to include("Manticore")
+                expect(event.get("request_headers")).to include("http_host" => "localhost:#{port}")
+                expect(event.get("request_headers")).to include("content_length" => "5")
+                expect(event.get("request_headers")).to include("content_type" => "text/plain")
+              end
+            end
           end
         end
       end
+    end
+    context "disabled" do
+      it "metadata is not added" do
+        let(:config) { { "add_metadata_header" => false} }
+        client.post("http://127.0.0.1:#{port}/meh.json",
+                    :headers => { "content-type" => "text/plain" },
+                    :body => "hello").call
+        event = logstash_queue.pop
+        event_hash = event.to_hash
+        expect(event.get("message")).to eq("hello")
+        expect(event_hash.keys).to eq([:@timesamp, :@version, :message])
     end
   end
 
