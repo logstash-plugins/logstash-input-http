@@ -195,6 +195,10 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       add_ecs_fields(headers, event)
       event.set(@request_headers_target_field, headers)
       event.set(@remote_host_target_field, remote_address)
+    else
+      event_hash = event.to_hash
+      event_hash.delete("event")
+      event = LogStash::Event::new(event_hash)
     end
     decorate(event)
     @queue << event
