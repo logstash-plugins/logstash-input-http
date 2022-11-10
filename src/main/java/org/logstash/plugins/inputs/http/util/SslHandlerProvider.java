@@ -1,12 +1,15 @@
 package org.logstash.plugins.inputs.http.util;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
+import java.net.InetSocketAddress;
 import java.util.Arrays;
 
 public class SslHandlerProvider {
@@ -28,13 +31,19 @@ public class SslHandlerProvider {
         this.sslContext = sslContext;
     }
 
-    public SslHandler getSslHandler(ByteBufAllocator bufferAllocator) {
+    public SslHandler getSslHandler(final SocketChannel socketChannel) {
+        final InetSocketAddress remoteAddress = socketChannel.remoteAddress();
+        final String peerHost = remoteAddress.getHostString();
+        final int peerPort = remoteAddress.getPort();
+        final SslHandler sslHandler = sslContext.newHandler(socketChannel.alloc(), peerHost, peerPort);
 
-        SslHandler sslHandler = sslContext.newHandler(bufferAllocator);
-
-        SSLEngine engine = sslHandler.engine();
+        final SSLEngine engine = sslHandler.engine();
         engine.setEnabledProtocols(protocols);
         engine.setUseClientMode(false);
+
+        final SSLParameters sslParameters = engine.getSSLParameters();
+        sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
+        engine.setSSLParameters(sslParameters);
 
         if (verifyMode == SslClientVerifyMode.FORCE_PEER) {
             // Explicitly require a client certificate
