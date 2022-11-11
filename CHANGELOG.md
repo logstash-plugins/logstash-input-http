@@ -1,3 +1,6 @@
+## 3.6.1
+ - Fix: provide SSL engine with advisory peer and algorithm information [#159](https://github.com/logstash-plugins/logstash-input-http/issues/159)
+
 ## 3.6.0
  - Feat: review and deprecate ssl protocol/cipher related settings [#151](https://github.com/logstash-plugins/logstash-input-http/pull/151)
 

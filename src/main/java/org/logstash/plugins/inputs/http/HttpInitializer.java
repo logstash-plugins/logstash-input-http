@@ -10,6 +10,7 @@ import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.ssl.SslHandler;
 import org.logstash.plugins.inputs.http.util.SslHandlerProvider;
 
+import java.net.InetSocketAddress;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -34,7 +35,7 @@ public class HttpInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline pipeline = socketChannel.pipeline();
 
         if(sslHandlerProvider != null) {
-            SslHandler sslHandler = sslHandlerProvider.getSslHandler(socketChannel.alloc());
+            SslHandler sslHandler = sslHandlerProvider.getSslHandler(socketChannel);
             pipeline.addLast(sslHandler);
         }
         pipeline.addLast(new HttpServerCodec());
