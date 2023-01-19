@@ -1,5 +1,5 @@
 ## 3.6.1
- - Update Netty dependency to 4.1.97 [#n](https://github.com/logstash-plugins/logstash-input-http/pull/n)
+ - Update Netty dependency to 4.1.87 [#162](https://github.com/logstash-plugins/logstash-input-http/pull/162)
 
 ## 3.6.0
  - Feat: review and deprecate ssl protocol/cipher related settings [#151](https://github.com/logstash-plugins/logstash-input-http/pull/151)
