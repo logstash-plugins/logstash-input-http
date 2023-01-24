@@ -25,17 +25,19 @@ public class MessageProcessor implements RejectableRunnable {
     private final String remoteAddress;
     private final IMessageHandler messageHandler;
     private final HttpResponseStatus responseStatus;
+    private final String responseBody;
 
     private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
     private final static Logger LOGGER = LogManager.getLogger(MessageHandler.class);
 
     MessageProcessor(ChannelHandlerContext ctx, FullHttpRequest req, String remoteAddress,
-                            IMessageHandler messageHandler, HttpResponseStatus responseStatus) {
+                            IMessageHandler messageHandler, HttpResponseStatus responseStatus, String responseBody) {
         this.ctx = ctx;
         this.req = req;
         this.remoteAddress = remoteAddress;
         this.messageHandler = messageHandler;
         this.responseStatus = responseStatus;
+        this.responseBody = responseBody;
     }
 
     public void onRejection() {
@@ -100,15 +102,19 @@ public class MessageProcessor implements RejectableRunnable {
                 req.protocolVersion(),
                 responseStatus);
         final DefaultHttpHeaders headers = new DefaultHttpHeaders();
+        bool hasContentTypeHeader = false;
         for(String key : stringHeaders.keySet()) {
             headers.set(key, stringHeaders.get(key));
+            hasContentTypeHeader = (key.toLowerCase() == HttpHeaderNames.CONTENT_TYPE);
+        }
+        if (!hasContentTypeHeader) {
+            headers.set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
         }
         response.headers().set(headers);
 
         if (responseStatus != HttpResponseStatus.NO_CONTENT) {
-            final ByteBuf payload = Unpooled.wrappedBuffer("ok".getBytes(UTF8_CHARSET));
+            final ByteBuf payload = Unpooled.wrappedBuffer(responseBody.getBytes(UTF8_CHARSET));
             response.headers().set(HttpHeaderNames.CONTENT_LENGTH, payload.readableBytes());
-            response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
             response.content().writeBytes(payload);
         }
 

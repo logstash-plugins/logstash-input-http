@@ -23,19 +23,21 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<FullHttpReque
     private final IMessageHandler messageHandler;
     private final ThreadPoolExecutor executorGroup;
     private final HttpResponseStatus responseStatus;
+    private final String responseBody;
 
     public HttpServerHandler(IMessageHandler messageHandler, ThreadPoolExecutor executorGroup,
-                             HttpResponseStatus responseStatus) {
+                             HttpResponseStatus responseStatus, String responseBody) {
         this.messageHandler = messageHandler;
         this.executorGroup = executorGroup;
         this.responseStatus = responseStatus;
+        this.responseBody = responseBody;
     }
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) {
         final String remoteAddress = ((InetSocketAddress) ctx.channel().remoteAddress()).getAddress().getHostAddress();
         msg.retain();
-        final MessageProcessor messageProcessor = new MessageProcessor(ctx, msg, remoteAddress, messageHandler, responseStatus);
+        final MessageProcessor messageProcessor = new MessageProcessor(ctx, msg, remoteAddress, messageHandler, responseStatus, responseBody);
         executorGroup.execute(messageProcessor);
     }
 
