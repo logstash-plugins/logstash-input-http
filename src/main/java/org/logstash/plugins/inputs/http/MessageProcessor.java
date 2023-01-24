@@ -102,10 +102,10 @@ public class MessageProcessor implements RejectableRunnable {
                 req.protocolVersion(),
                 responseStatus);
         final DefaultHttpHeaders headers = new DefaultHttpHeaders();
-        bool hasContentTypeHeader = false;
+        boolean hasContentTypeHeader = false;
         for(String key : stringHeaders.keySet()) {
             headers.set(key, stringHeaders.get(key));
-            hasContentTypeHeader = (key.toLowerCase() == HttpHeaderNames.CONTENT_TYPE);
+            hasContentTypeHeader = (HttpHeaderNames.CONTENT_TYPE.contentEqualsIgnoreCase(key));
         }
         if (!hasContentTypeHeader) {
             headers.set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
