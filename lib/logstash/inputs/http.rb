@@ -101,7 +101,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # Send reponses with this HTTP code. 204 is `no content`, and forces an empty response body
   config :response_code, :validate => [200, 201, 202, 204], :default => 200
 
-  # Send this as the body to each HTTP POST. A JSON example: `"{\"ok\": true}"`.
+  # Send this as the body to each HTTP POST. A JSON example: `'{"ok": true}'`.
   config :response_body, :default => "ok"
 
   # specify a custom set of response headers (use lowercase keys, per netty.io)
