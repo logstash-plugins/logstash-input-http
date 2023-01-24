@@ -98,8 +98,14 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # and no codec for the request's content-type is found
   config :additional_codecs, :validate => :hash, :default => { "application/json" => "json" }
 
-  # specify a custom set of response headers
-  config :response_headers, :validate => :hash, :default => { 'Content-Type' => 'text/plain' }
+  # Send reponses with this HTTP code. 204 is `no content`, and forces an empty response body
+  config :response_code, :validate => [200, 201, 202, 204], :default => 200
+
+  # Send this as the body to each HTTP POST. A JSON example: `'{"ok": true}'`.
+  config :response_body, :default => "ok"
+
+  # specify a custom set of response headers (use lowercase keys, per netty.io)
+  config :response_headers, :validate => :hash, :default => { 'content-type' => 'text/plain' }
 
   # target field for the client host of the http request
   config :remote_host_target_field, :validate => :string
@@ -112,8 +118,6 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   config :max_pending_requests, :validate => :number, :required => false, :default => 200
 
   config :max_content_length, :validate => :number, :required => false, :default => 100 * 1024 * 1024
-
-  config :response_code, :validate => [200, 201, 202, 204], :default => 200
 
   # Deprecated options
 
@@ -282,7 +286,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   def create_http_server(message_handler)
     org.logstash.plugins.inputs.http.NettyHttpServer.new(
-      @host, @port, message_handler, build_ssl_params(), @threads, @max_pending_requests, @max_content_length, @response_code)
+      @host, @port, message_handler, build_ssl_params(), @threads, @max_pending_requests, @max_content_length, @response_code, @response_body)
   end
 
   def build_ssl_params
