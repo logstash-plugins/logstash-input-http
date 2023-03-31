@@ -1,3 +1,10 @@
+## 3.7.0
+ - Reviewed and deprecated SSL settings to comply with Logstash's naming convention [#164](https://github.com/logstash-plugins/logstash-input-http/pull/164)
+   - Deprecated `ssl` in favor of `ssl_enabled`
+   - Deprecated `ssl_verify_mode` in favor of `ssl_client_authentication`
+   - Deprecated `keystore` in favor of `ssl_keystore_path`
+   - Deprecated `keystore_password` in favor of `ssl_keystore_password`
+
 ## 3.6.1
  - Update Netty dependency to 4.1.87 [#162](https://github.com/logstash-plugins/logstash-input-http/pull/162)
 

@@ -7,6 +7,7 @@ require "stud/temporary"
 require "zlib"
 require "stringio"
 require 'logstash/plugin_mixins/ecs_compatibility_support/spec_helper'
+require 'inputs/helpers'
 
 java_import "io.netty.handler.ssl.util.SelfSignedCertificate"
 
@@ -165,22 +166,20 @@ describe LogStash::Inputs::Http do
 
         let(:url) { super().sub('http://', 'https://') }
 
-        certs_dir = File.expand_path('../fixtures/certs/generated', File.dirname(__FILE__))
-
         let(:config) do
-          super().merge 'ssl' => true,
-                        'ssl_certificate_authorities' => [ File.join(certs_dir, 'root.crt') ],
-                        'ssl_certificate' => File.join(certs_dir, 'server_from_root.crt'),
-                        'ssl_key' => File.join(certs_dir, 'server_from_root.key.pkcs8'),
-                        'ssl_verify_mode' => 'peer'
+          super().merge 'ssl_enabled' => true,
+                        'ssl_certificate_authorities' => [certificate_path('root.crt')],
+                        'ssl_certificate' => certificate_path( 'server_from_root.crt'),
+                        'ssl_key' => certificate_path( 'server_from_root.key.pkcs8'),
+                        'ssl_client_authentication' => 'optional'
         end
 
         let(:client_options) do
           super().merge ssl: {
               verify: false,
-              ca_file: File.join(certs_dir, 'root.crt'),
-              client_cert: File.join(certs_dir, 'client_from_root.crt'),
-              client_key: File.join(certs_dir, 'client_from_root.key.pkcs8'),
+              ca_file: certificate_path( 'root.crt'),
+              client_cert: certificate_path( 'client_from_root.crt'),
+              client_key: certificate_path( 'client_from_root.key.pkcs8'),
           }
         end
 
@@ -538,15 +537,27 @@ describe LogStash::Inputs::Http do
     end
   end
 
-  context "with :ssl => false" do
-    subject { LogStash::Inputs::Http.new("port" => port, "ssl" => false) }
+  context "with :ssl_enabled => false" do
+    let(:config) { {"port" => port, "ssl_enabled" => false} }
+
     it "should not raise exception" do
       expect { subject.register }.to_not raise_exception
     end
+
+    context "and `ssl_` settings provided" do
+      let(:ssc) { SelfSignedCertificate.new }
+      let(:config) { { "port" => 0, "ssl_enabled" => false, "ssl_certificate" => ssc.certificate.path, "ssl_client_authentication" => "none", "cipher_suites" => ["TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA"] } }
+
+      it "should warn about not using the configs" do
+        expect(subject.logger).to receive(:warn).with('Configured SSL settings are not used when `ssl_enabled` is set to `false`: ["ssl_certificate", "ssl_client_authentication", "cipher_suites"]')
+        subject.register
+      end
+    end
   end
-  context "with :ssl => true" do
+
+  context "with :ssl_enabled => true" do
     context "without :ssl_certificate" do
-      subject { LogStash::Inputs::Http.new("port" => port, "ssl" => true) }
+      subject { LogStash::Inputs::Http.new("port" => port, "ssl_enabled" => true) }
       it "should raise exception" do
         expect { subject.register }.to raise_exception(LogStash::ConfigurationError)
       end
@@ -563,7 +574,7 @@ describe LogStash::Inputs::Http do
       let(:ssl_key) { ssc.private_key }
 
       let(:config) do
-        { "port" => port, "ssl" => true, "ssl_certificate" => ssl_certificate.path, "ssl_key" => ssl_key.path }
+        { "port" => port, "ssl_enabled" => true, "ssl_certificate" => ssl_certificate.path, "ssl_key" => ssl_key.path }
       end
 
       after(:each) { ssc.delete }
@@ -575,46 +586,37 @@ describe LogStash::Inputs::Http do
       end
 
       context "with ssl_verify_mode = none" do
-        subject { LogStash::Inputs::Http.new(config.merge("ssl_verify_mode" => "none")) }
+        subject { LogStash::Inputs::Http.new(config.merge("ssl_client_authentication" => "none")) }
 
         it "should not raise exception" do
           expect { subject.register }.to_not raise_exception
         end
       end
-      ["peer", "force_peer"].each do |verify_mode|
-        context "with ssl_verify_mode = #{verify_mode}" do
-          subject { LogStash::Inputs::Http.new("port" => port, "ssl" => true,
-                                               "ssl_certificate" => ssl_certificate.path,
-                                               "ssl_certificate_authorities" => ssl_certificate.path,
-                                               "ssl_key" => ssl_key.path,
-                                               "ssl_verify_mode" => verify_mode
-                                              ) }
+      ["ssl_verify_mode", "verify_mode"].each do |config_name|
+        ["peer", "force_peer"].each do |verify_mode|
+          context "with deprecated #{config_name} = #{verify_mode}" do
+            subject { LogStash::Inputs::Http.new("port" => port,
+                                                 "ssl_enabled" => true,
+                                                 "ssl_certificate" => ssl_certificate.path,
+                                                 "ssl_certificate_authorities" => ssl_certificate.path,
+                                                 "ssl_key" => ssl_key.path,
+                                                  config_name => verify_mode
+                                                ) }
+            it "should not raise exception" do
+              expect { subject.register }.to_not raise_exception
+            end
+          end
+        end
+      end
+      ["ssl_verify_mode", "verify_mode"].each do |config_name|
+        context "with deprecated #{config_name} = none" do
+          subject { LogStash::Inputs::Http.new(config.merge(config_name => "none")) }
+
           it "should not raise exception" do
             expect { subject.register }.to_not raise_exception
           end
         end
       end
-      context "with verify_mode = none" do
-        subject { LogStash::Inputs::Http.new(config.merge("verify_mode" => "none")) }
-
-        it "should not raise exception" do
-          expect { subject.register }.to_not raise_exception
-        end
-      end
-      ["peer", "force_peer"].each do |verify_mode|
-        context "with verify_mode = #{verify_mode}" do
-          subject { LogStash::Inputs::Http.new("port" => port, "ssl" => true,
-                                               "ssl_certificate" => ssl_certificate.path,
-                                               "ssl_certificate_authorities" => ssl_certificate.path,
-                                               "ssl_key" => ssl_key.path,
-                                               "verify_mode" => verify_mode
-                                              ) }
-          it "should not raise exception" do
-            expect { subject.register }.to_not raise_exception
-          end
-        end
-      end
-
       context "with invalid ssl certificate" do
         before do
           cert = File.readlines path = config["ssl_certificate"]
@@ -646,7 +648,7 @@ describe LogStash::Inputs::Http do
 
       context "with invalid ssl certificate_authorities" do
         let(:config) do
-          super().merge("ssl_verify_mode" => "peer", "ssl_certificate_authorities" => [ ssc.certificate.path, ssc.private_key.path ])
+          super().merge("ssl_client_authentication" => "optional", "ssl_certificate_authorities" => [ ssc.certificate.path, ssc.private_key.path ])
         end
 
         it "should raise a cert error" do
@@ -662,13 +664,33 @@ describe LogStash::Inputs::Http do
         end
       end
 
-      context "with both verify_mode options set" do
+      context "with both verify_mode and ssl_verify_mode options set" do
         let(:config) do
-          super().merge('ssl_verify_mode' => 'peer', 'verify_mode' => 'none')
+          super().merge('verify_mode' => 'none', 'ssl_verify_mode' => 'none')
         end
 
         it "should raise a configuration error" do
-          expect { subject.register }.to raise_error LogStash::ConfigurationError, /Use only .?ssl_verify_mode.?/i
+          expect { subject.register }.to raise_error LogStash::ConfigurationError, /Use only .?ssl_verify_mode`.?/i
+        end
+      end
+
+      context "with both ssl_client_authentication and ssl_verify_mode options set" do
+        let(:config) do
+          super().merge('ssl_client_authentication' => 'optional', 'ssl_verify_mode' => 'none')
+        end
+
+        it "should raise a configuration error" do
+          expect { subject.register }.to raise_error LogStash::ConfigurationError, /Use only .?ssl_client_authentication.?/i
+        end
+      end
+
+      context "with both ssl_client_authentication and verify_mode options set" do
+        let(:config) do
+          super().merge('ssl_client_authentication' => 'optional', 'verify_mode' => 'none')
+        end
+
+        it "should raise a configuration error" do
+          expect { subject.register }.to raise_error LogStash::ConfigurationError, /Use only .?ssl_client_authentication.?/i
         end
       end
 
@@ -703,6 +725,101 @@ describe LogStash::Inputs::Http do
         end
       end
 
+      context "with both ssl and ssl_enabled set" do
+        let(:config) do
+          super().merge('ssl' => true, 'ssl_enabled' => true )
+        end
+
+        it "should raise a configuration error" do
+          expect { subject.register }.to raise_error LogStash::ConfigurationError, /Use only .?ssl_enabled.?/i
+        end
+      end
+
+      context "with ssl_client_authentication" do
+        context "normalized from ssl_verify_mode 'none'" do
+          let(:config) { super().merge("ssl_verify_mode" => "none") }
+
+          it "should transform the value to 'none'" do
+            subject.register
+            expect(subject.params).to match hash_including("ssl_client_authentication" => "none")
+            expect(subject.instance_variable_get(:@ssl_client_authentication)).to eql("none")
+          end
+
+          context "and ssl_certificate_authorities is set" do
+            let(:config) { super().merge("ssl_certificate_authorities" => [certificate_path( 'root.crt')]) }
+            it "raise a configuration error" do
+              expect { subject.register }.to raise_error(LogStash::ConfigurationError, "The configuration of `ssl_certificate_authorities` requires setting `ssl_verify_mode` to `peer` or 'force_peer'")
+            end
+          end
+        end
+
+        [%w[peer optional], %w[force_peer required]].each do |ssl_verify_mode, ssl_client_authentication|
+          context "normalized from ssl_verify_mode '#{ssl_verify_mode}'" do
+            let(:config) { super().merge("ssl_verify_mode" => ssl_verify_mode, "ssl_certificate_authorities" => [certificate_path( 'root.crt')]) }
+
+            it "should transform the value to '#{ssl_client_authentication}'" do
+              subject.register
+              expect(subject.params).to match hash_including("ssl_client_authentication" => ssl_client_authentication)
+              expect(subject.instance_variable_get(:@ssl_client_authentication)).to eql(ssl_client_authentication)
+            end
+
+            context "with no ssl_certificate_authorities set " do
+              let(:config) { super().reject { |key| "ssl_certificate_authorities".eql?(key) } }
+              it "raise a configuration error" do
+                expect {subject.register}.to raise_error(LogStash::ConfigurationError, "Using `ssl_verify_mode` set to `peer` or `force_peer`, requires the configuration of `ssl_certificate_authorities`")
+              end
+            end
+          end
+        end
+
+        context "configured to 'none'" do
+          let(:config) { super().merge("ssl_client_authentication" => "none") }
+
+          it "doesn't raise an error when certificate_authorities is not set" do
+            expect {subject.register}.to_not raise_error
+          end
+
+          context "with certificate_authorities set" do
+            let(:config) { super().merge("ssl_certificate_authorities" => [certificate_path( 'root.crt')]) }
+
+            it "raise a configuration error" do
+              expect {subject.register}.to raise_error(LogStash::ConfigurationError, "The configuration of `ssl_certificate_authorities` requires setting `ssl_client_authentication` to `optional` or 'required'")
+            end
+          end
+        end
+
+        context "configured to 'required'" do
+          let(:config) { super().merge("ssl_client_authentication" => "required") }
+
+          it "raise a ConfigurationError when certificate_authorities is not set" do
+            expect {subject.register}.to raise_error(LogStash::ConfigurationError, "Using `ssl_client_authentication` set to `optional` or `required`, requires the configuration of `ssl_certificate_authorities`")
+          end
+
+          context "with ssl_certificate_authorities set" do
+            let(:config) { super().merge("ssl_certificate_authorities" => [certificate_path( 'root.crt')]) }
+
+            it "doesn't raise a configuration error" do
+              expect {subject.register}.not_to raise_error
+            end
+          end
+        end
+
+        context "configured to 'optional'" do
+          let(:config) { super().merge("ssl_client_authentication" => "optional") }
+
+          it "raise a ConfigurationError when certificate_authorities is not set" do
+            expect {subject.register}.to raise_error(LogStash::ConfigurationError, "Using `ssl_client_authentication` set to `optional` or `required`, requires the configuration of `ssl_certificate_authorities`")
+          end
+
+          context "with certificate_authorities set" do
+            let(:config) { super().merge("ssl_certificate_authorities" => [certificate_path( 'root.crt')]) }
+
+            it "doesn't raise a configuration error" do
+              expect {subject.register}.not_to raise_error
+            end
+          end
+        end
+      end
     end
   end
 end

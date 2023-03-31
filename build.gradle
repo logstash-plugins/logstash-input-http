@@ -12,6 +12,7 @@ description = "HTTP Input Netty implementation"
 
 String log4jVersion = '2.17.0'
 String nettyVersion = '4.1.87.Final'
+String junitVersion = '5.9.2'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
@@ -21,8 +22,9 @@ repositories {
 }
 
 dependencies {
-    testImplementation 'junit:junit:4.12'
-    testImplementation 'org.hamcrest:hamcrest-library:1.3'
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+    testImplementation 'org.hamcrest:hamcrest-library:2.2'
     testImplementation "org.apache.logging.log4j:log4j-core:${log4jVersion}"
 
     implementation "io.netty:netty-buffer:${nettyVersion}"
@@ -36,8 +38,10 @@ dependencies {
 }
 
 test {
+    useJUnitPlatform()
     systemProperties.put "io.netty.leakDetectionLevel", "paranoid"
     testLogging {
+        events "passed", "skipped", "failed"
         exceptionFormat = 'full'
     }
 }
