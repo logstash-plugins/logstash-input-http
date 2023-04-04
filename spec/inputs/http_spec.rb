@@ -549,7 +549,7 @@ describe LogStash::Inputs::Http do
       let(:config) { { "port" => 0, "ssl_enabled" => false, "ssl_certificate" => ssc.certificate.path, "ssl_client_authentication" => "none", "cipher_suites" => ["TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA"] } }
 
       it "should warn about not using the configs" do
-        expect(subject.logger).to receive(:warn).with('Configured SSL settings are not used when `ssl_enabled` is set to `false`: ["ssl_certificate", "ssl_client_authentication", "cipher_suites"]')
+        expect(subject.logger).to receive(:warn).with(/^Configured SSL settings are not used when `ssl_enabled` is set to `false`: \[("ssl_certificate"(,\s)?|"ssl_client_authentication"(,\s)?|"cipher_suites"(,\s)?)*\]$/)
         subject.register
       end
     end

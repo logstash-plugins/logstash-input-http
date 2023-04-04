@@ -3,7 +3,6 @@ package org.logstash.plugins.inputs.http.util;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContext;
-import org.hamcrest.core.Every;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLEngine;
@@ -16,6 +15,7 @@ import static org.hamcrest.Matchers.arrayWithSize;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.isIn;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.core.Every.everyItem;
 import static org.hamcrest.core.Is.is;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -67,7 +67,7 @@ class SslSimpleBuilderTest {
     @Test
     void testSetCipherSuitesShouldNotFailIfAllCiphersAreValid() {
         final SslSimpleBuilder SslSimpleBuilder = createSslSimpleBuilder();
-        assertDoesNotThrow(()-> SslSimpleBuilder.setCipherSuites(SUPPORTED_CIPHERS.toArray(new String[0])));
+        assertDoesNotThrow(() -> SslSimpleBuilder.setCipherSuites(SUPPORTED_CIPHERS.toArray(new String[0])));
     }
 
     @Test
@@ -106,7 +106,7 @@ class SslSimpleBuilderTest {
         // Check that default ciphers is the subset of default ciphers of current Java version.
         final SSLServerSocketFactory ssf = (SSLServerSocketFactory) SSLServerSocketFactory.getDefault();
         final List<String> availableCiphers = Arrays.asList(ssf.getSupportedCipherSuites());
-        assertThat(Arrays.asList(defaultCiphers), Every.everyItem(isIn(availableCiphers)));
+        assertThat(Arrays.asList(defaultCiphers), everyItem(isIn(availableCiphers)));
     }
 
     @Test
@@ -117,7 +117,7 @@ class SslSimpleBuilderTest {
         SslSimpleBuilder.setClientAuthentication(SslClientVerifyMode.REQUIRED, certificateAuthorities);
 
         assertThat(SslSimpleBuilder.getVerifyMode(), is(SslClientVerifyMode.REQUIRED));
-        assertThat(Arrays.asList(SslSimpleBuilder.getCertificateAuthorities()), Every.everyItem(isIn(certificateAuthorities)));
+        assertThat(Arrays.asList(SslSimpleBuilder.getCertificateAuthorities()), everyItem(isIn(certificateAuthorities)));
     }
 
     @Test
@@ -131,13 +131,16 @@ class SslSimpleBuilderTest {
     }
 
     @Test
-    void testSetClientAuthenticationWithNone() {
+    void testSetClientAuthenticationWithNoneAndEmptyCA() {
         final SslSimpleBuilder SslSimpleBuilder = createSslSimpleBuilder();
-
         SslSimpleBuilder.setClientAuthentication(SslClientVerifyMode.NONE, new String[0]);
         assertThat(SslSimpleBuilder.getVerifyMode(), is(SslClientVerifyMode.NONE));
         assertThat(SslSimpleBuilder.getCertificateAuthorities(), arrayWithSize(0));
+    }
 
+    @Test
+    void testSetClientAuthenticationWithNoneAndNullCA() {
+        final SslSimpleBuilder SslSimpleBuilder = createSslSimpleBuilder();
         SslSimpleBuilder.setClientAuthentication(SslClientVerifyMode.NONE, null);
         assertThat(SslSimpleBuilder.getVerifyMode(), is(SslClientVerifyMode.NONE));
         assertThat(SslSimpleBuilder.getCertificateAuthorities(), nullValue());
