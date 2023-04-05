@@ -178,13 +178,13 @@ class SslSimpleBuilderTest {
     }
 
     @Test
-    void testBuildContextWithNonEncryptedKey() throws Exception {
+    void testBuildContextWithNonEncryptedKey() {
         final SslSimpleBuilder sslSimpleBuilder = new SslSimpleBuilder(CERTIFICATE, KEY, null);
         assertDoesNotThrow(sslSimpleBuilder::build);
     }
 
     @Test
-    void testBuildContextWithEncryptedKey() throws Exception {
+    void testBuildContextWithEncryptedKey() {
         final SslSimpleBuilder sslSimpleBuilder = new SslSimpleBuilder(CERTIFICATE, KEY_ENCRYPTED, "1234");
         assertDoesNotThrow(sslSimpleBuilder::build);
     }
