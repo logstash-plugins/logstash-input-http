@@ -1,5 +1,6 @@
 package org.logstash.plugins.inputs.http.util;
 
+import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import org.apache.logging.log4j.LogManager;
@@ -23,6 +24,22 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLServerSocketFactory;
 
 public class SslSimpleBuilder implements SslBuilder {
+
+    public enum SslClientVerifyMode {
+        NONE(ClientAuth.NONE),
+        OPTIONAL(ClientAuth.OPTIONAL),
+        REQUIRED(ClientAuth.REQUIRE);
+
+        private final ClientAuth clientAuth;
+
+        SslClientVerifyMode(ClientAuth clientAuth) {
+            this.clientAuth = clientAuth;
+        }
+
+        public ClientAuth toClientAuth() {
+            return clientAuth;
+        }
+    }
 
     private final static Logger logger = LogManager.getLogger(SslSimpleBuilder.class);
 
@@ -67,16 +84,33 @@ public class SslSimpleBuilder implements SslBuilder {
             "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256"
     };
 
+    private String[] protocols = new String[] { "TLSv1.2", "TLSv1.3" };
     private String[] ciphers = getDefaultCiphers();
-    private File sslKeyFile;
-    private File sslCertificateFile;
+    private final File sslKeyFile;
+    private final File sslCertificateFile;
     private String[] certificateAuthorities;
-    private String passPhrase;
+    private final String passphrase;
+    private SslClientVerifyMode verifyMode = SslClientVerifyMode.NONE;
 
     public SslSimpleBuilder(String sslCertificateFilePath, String sslKeyFilePath, String pass) {
         sslCertificateFile = new File(sslCertificateFilePath);
+        if (!sslCertificateFile.canRead()) {
+            throw new IllegalArgumentException(
+                    String.format("Certificate file cannot be read. Please confirm the user running Logstash has permissions to read: %s", sslCertificateFilePath));
+        }
+
         sslKeyFile = new File(sslKeyFilePath);
-        passPhrase = pass;
+        if (!sslKeyFile.canRead()) {
+            throw new IllegalArgumentException(
+                    String.format("Private key file cannot be read. Please confirm the user running Logstash has permissions to read: %s", sslKeyFilePath));
+        }
+
+        passphrase = pass;
+    }
+
+    public SslSimpleBuilder setProtocols(String[] protocols) {
+        this.protocols = protocols;
+        return this;
     }
 
     public SslSimpleBuilder setCipherSuites(String[] ciphersSuite) throws IllegalArgumentException {
@@ -95,26 +129,42 @@ public class SslSimpleBuilder implements SslBuilder {
         return this;
     }
 
-    public SslSimpleBuilder setCertificateAuthorities(String[] cert) {
-        certificateAuthorities = cert;
+    public SslSimpleBuilder setClientAuthentication(SslClientVerifyMode verifyMode, String[] certificateAuthorities) {
+        if (isClientAuthenticationEnabled(verifyMode) && (certificateAuthorities == null || certificateAuthorities.length < 1)) {
+            throw new IllegalArgumentException("Certificate authorities are required to enable client authentication");
+        }
+
+        this.verifyMode = verifyMode;
+        this.certificateAuthorities = certificateAuthorities;
         return this;
     }
 
-    public SslContext build() throws Exception {
-        SslContextBuilder builder = SslContextBuilder.forServer(sslCertificateFile, sslKeyFile, passPhrase);
+    private boolean isClientAuthenticationEnabled(final SslClientVerifyMode mode) {
+        return mode == SslClientVerifyMode.OPTIONAL || mode == SslClientVerifyMode.REQUIRED;
+    }
 
+    public boolean isClientAuthenticationRequired() {
+        return verifyMode == SslClientVerifyMode.REQUIRED;
+    }
+
+    public SslContext build() throws Exception {
         if (logger.isDebugEnabled()) {
-            logger.debug("Available ciphers: " + SUPPORTED_CIPHERS);
-            logger.debug("Ciphers:  " + Arrays.toString(ciphers));
+            logger.debug("Available ciphers: {}", SUPPORTED_CIPHERS);
+            logger.debug("Ciphers: {}", Arrays.toString(ciphers));
         }
 
-        builder.ciphers(Arrays.asList(ciphers));
+        SslContextBuilder builder = SslContextBuilder
+                .forServer(sslCertificateFile, sslKeyFile, passphrase)
+                .ciphers(Arrays.asList(ciphers))
+                .protocols(protocols);
 
-        if (requireClientAuth()) {
-            if (logger.isDebugEnabled())
-                logger.debug("Certificate Authorities: " + Arrays.toString(certificateAuthorities));
+        if (isClientAuthenticationEnabled(verifyMode)) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Certificate Authorities: {}", Arrays.toString(certificateAuthorities));
+            }
 
-            builder.trustManager(loadCertificateCollection(certificateAuthorities));
+            builder.clientAuth(verifyMode.toClientAuth())
+                    .trustManager(loadCertificateCollection(certificateAuthorities));
         }
 
         return doBuild(builder);
@@ -143,27 +193,17 @@ public class SslSimpleBuilder implements SslBuilder {
         logger.debug("Load certificates collection");
         CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
 
-        List<X509Certificate> collections = new ArrayList<X509Certificate>();
+        final List<X509Certificate> collections = new ArrayList<>();
 
-        for(int i = 0; i < certificates.length; i++) {
-            String certificate = certificates[i];
+        for (String certificate : certificates) {
+            logger.debug("Loading certificates from file {}", certificate);
 
-            logger.debug("Loading certificates from file " + certificate);
-
-            try(InputStream in = new FileInputStream(certificate)) {
+            try (InputStream in = new FileInputStream(certificate)) {
                 List<X509Certificate> certificatesChains = (List<X509Certificate>) certificateFactory.generateCertificates(in);
                 collections.addAll(certificatesChains);
             }
         }
         return collections.toArray(new X509Certificate[collections.size()]);
-    }
-
-    private boolean requireClientAuth() {
-        if (certificateAuthorities != null) {
-            return true;
-        }
-
-        return false;
     }
 
     public static String[] getDefaultCiphers() {
@@ -185,4 +225,19 @@ public class SslSimpleBuilder implements SslBuilder {
         }
     }
 
+    String[] getProtocols() {
+        return protocols != null ? protocols.clone() : null;
+    }
+
+    String[] getCertificateAuthorities() {
+        return certificateAuthorities != null ? certificateAuthorities.clone() : null;
+    }
+
+    String[] getCiphers() {
+        return ciphers != null ? ciphers.clone() : null;
+    }
+
+    SslClientVerifyMode getVerifyMode() {
+        return verifyMode;
+    }
 }
