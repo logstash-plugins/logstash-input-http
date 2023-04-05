@@ -66,13 +66,13 @@ class SslSimpleBuilderTest {
 
     @Test
     void testSetCipherSuitesShouldNotFailIfAllCiphersAreValid() {
-        final SslSimpleBuilder SslSimpleBuilder = createSslSimpleBuilder();
-        assertDoesNotThrow(() -> SslSimpleBuilder.setCipherSuites(SUPPORTED_CIPHERS.toArray(new String[0])));
+        final SslSimpleBuilder sslSimpleBuilder = createSslSimpleBuilder();
+        assertDoesNotThrow(() -> sslSimpleBuilder.setCipherSuites(SUPPORTED_CIPHERS.toArray(new String[0])));
     }
 
     @Test
     void testSetCipherSuitesShouldThrowIfAnyCiphersIsInValid() {
-        final SslSimpleBuilder SslSimpleBuilder = createSslSimpleBuilder();
+        final SslSimpleBuilder sslSimpleBuilder = createSslSimpleBuilder();
         final String[] ciphers = SUPPORTED_CIPHERS
                 .toArray(new String[SUPPORTED_CIPHERS.size() + 1]);
 
@@ -80,7 +80,7 @@ class SslSimpleBuilderTest {
 
         final IllegalArgumentException thrown = assertThrows(
                 IllegalArgumentException.class,
-                () -> SslSimpleBuilder.setCipherSuites(ciphers)
+                () -> sslSimpleBuilder.setCipherSuites(ciphers)
         );
 
         assertEquals("Cipher `TLS_INVALID_CIPHER` is not available", thrown.getMessage());
@@ -88,14 +88,14 @@ class SslSimpleBuilderTest {
 
     @Test
     void testSetProtocols() {
-        final SslSimpleBuilder SslSimpleBuilder = createSslSimpleBuilder();
-        assertArrayEquals(new String[]{"TLSv1.2", "TLSv1.3"}, SslSimpleBuilder.getProtocols());
+        final SslSimpleBuilder sslSimpleBuilder = createSslSimpleBuilder();
+        assertArrayEquals(new String[]{"TLSv1.2", "TLSv1.3"}, sslSimpleBuilder.getProtocols());
 
-        SslSimpleBuilder.setProtocols(new String[]{"TLSv1.1"});
-        assertArrayEquals(new String[]{"TLSv1.1"}, SslSimpleBuilder.getProtocols());
+        sslSimpleBuilder.setProtocols(new String[]{"TLSv1.1"});
+        assertArrayEquals(new String[]{"TLSv1.1"}, sslSimpleBuilder.getProtocols());
 
-        SslSimpleBuilder.setProtocols(new String[]{"TLSv1.1", "TLSv1.2"});
-        assertArrayEquals(new String[]{"TLSv1.1", "TLSv1.2"}, SslSimpleBuilder.getProtocols());
+        sslSimpleBuilder.setProtocols(new String[]{"TLSv1.1", "TLSv1.2"});
+        assertArrayEquals(new String[]{"TLSv1.1", "TLSv1.2"}, sslSimpleBuilder.getProtocols());
     }
 
     @Test
@@ -111,58 +111,58 @@ class SslSimpleBuilderTest {
 
     @Test
     void testSetClientAuthentication() {
-        final SslSimpleBuilder SslSimpleBuilder = createSslSimpleBuilder();
+        final SslSimpleBuilder sslSimpleBuilder = createSslSimpleBuilder();
         final String[] certificateAuthorities = {CA};
 
-        SslSimpleBuilder.setClientAuthentication(SslClientVerifyMode.REQUIRED, certificateAuthorities);
+        sslSimpleBuilder.setClientAuthentication(SslClientVerifyMode.REQUIRED, certificateAuthorities);
 
-        assertThat(SslSimpleBuilder.getVerifyMode(), is(SslClientVerifyMode.REQUIRED));
-        assertThat(Arrays.asList(SslSimpleBuilder.getCertificateAuthorities()), everyItem(isIn(certificateAuthorities)));
+        assertThat(sslSimpleBuilder.getVerifyMode(), is(SslClientVerifyMode.REQUIRED));
+        assertThat(Arrays.asList(sslSimpleBuilder.getCertificateAuthorities()), everyItem(isIn(certificateAuthorities)));
     }
 
     @Test
     void testSetClientAuthenticationWithRequiredAndNoCertAuthorities() {
-        assertSetClientAuthenticationThrowWithNoCerts(SslClientVerifyMode.REQUIRED);
+        assertSetClientAuthenticationThrowsWhenCAIsNullOrEmpty(SslClientVerifyMode.REQUIRED);
     }
 
     @Test
     void testSetClientAuthenticationWithOptionalAndNoCertAuthorities() {
-        assertSetClientAuthenticationThrowWithNoCerts(SslClientVerifyMode.OPTIONAL);
+        assertSetClientAuthenticationThrowsWhenCAIsNullOrEmpty(SslClientVerifyMode.OPTIONAL);
     }
 
     @Test
     void testSetClientAuthenticationWithNoneAndEmptyCA() {
-        final SslSimpleBuilder SslSimpleBuilder = createSslSimpleBuilder();
-        SslSimpleBuilder.setClientAuthentication(SslClientVerifyMode.NONE, new String[0]);
-        assertThat(SslSimpleBuilder.getVerifyMode(), is(SslClientVerifyMode.NONE));
-        assertThat(SslSimpleBuilder.getCertificateAuthorities(), arrayWithSize(0));
+        final SslSimpleBuilder sslSimpleBuilder = createSslSimpleBuilder();
+        sslSimpleBuilder.setClientAuthentication(SslClientVerifyMode.NONE, new String[0]);
+        assertThat(sslSimpleBuilder.getVerifyMode(), is(SslClientVerifyMode.NONE));
+        assertThat(sslSimpleBuilder.getCertificateAuthorities(), arrayWithSize(0));
     }
 
     @Test
     void testSetClientAuthenticationWithNoneAndNullCA() {
-        final SslSimpleBuilder SslSimpleBuilder = createSslSimpleBuilder();
-        SslSimpleBuilder.setClientAuthentication(SslClientVerifyMode.NONE, null);
-        assertThat(SslSimpleBuilder.getVerifyMode(), is(SslClientVerifyMode.NONE));
-        assertThat(SslSimpleBuilder.getCertificateAuthorities(), nullValue());
+        final SslSimpleBuilder sslSimpleBuilder = createSslSimpleBuilder();
+        sslSimpleBuilder.setClientAuthentication(SslClientVerifyMode.NONE, null);
+        assertThat(sslSimpleBuilder.getVerifyMode(), is(SslClientVerifyMode.NONE));
+        assertThat(sslSimpleBuilder.getCertificateAuthorities(), nullValue());
     }
 
     @Test
     void testDefaultVerifyMode() {
-        final SslSimpleBuilder SslSimpleBuilder = createSslSimpleBuilder();
-        assertThat(SslSimpleBuilder.getVerifyMode(), is(SslClientVerifyMode.NONE));
+        final SslSimpleBuilder sslSimpleBuilder = createSslSimpleBuilder();
+        assertThat(sslSimpleBuilder.getVerifyMode(), is(SslClientVerifyMode.NONE));
     }
 
-    private void assertSetClientAuthenticationThrowWithNoCerts(SslClientVerifyMode mode) {
-        final SslSimpleBuilder SslSimpleBuilder = createSslSimpleBuilder();
+    private void assertSetClientAuthenticationThrowsWhenCAIsNullOrEmpty(SslClientVerifyMode mode) {
+        final SslSimpleBuilder sslSimpleBuilder = createSslSimpleBuilder();
         final String expectedMessage = "Certificate authorities are required to enable client authentication";
 
         final IllegalArgumentException emptyThrown = assertThrows(
                 IllegalArgumentException.class,
-                () -> SslSimpleBuilder.setClientAuthentication(mode, new String[0])
+                () -> sslSimpleBuilder.setClientAuthentication(mode, new String[0])
         );
 
         final IllegalArgumentException nullThrown = assertThrows(IllegalArgumentException.class,
-                () -> SslSimpleBuilder.setClientAuthentication(mode, null),
+                () -> sslSimpleBuilder.setClientAuthentication(mode, null),
                 expectedMessage
         );
 
@@ -190,58 +190,58 @@ class SslSimpleBuilderTest {
     }
 
     @Test
-    void testBuildContextWithClientAuthentication() throws Exception {
-        assertSslSimpleBuilderBuildContext(createSslSimpleBuilder()
+    void testBuildContextWhenClientAuthenticationIsRequired() throws Exception {
+        final SSLEngine sslEngine = assertSSlEngineFromBuilder(createSslSimpleBuilder()
                 .setClientAuthentication(SslClientVerifyMode.REQUIRED, new String[]{CA})
         );
 
-        assertSslSimpleBuilderBuildContext(createSslSimpleBuilder()
-                .setClientAuthentication(SslClientVerifyMode.OPTIONAL, new String[]{CA})
-        );
+        assertTrue(sslEngine.getNeedClientAuth());
+        assertFalse(sslEngine.getWantClientAuth());
     }
 
     @Test
-    void testBuildContextWithNoClientAuthentication() throws Exception {
-        SslSimpleBuilder SslSimpleBuilder = createSslSimpleBuilder()
-                .setClientAuthentication(SslClientVerifyMode.NONE, new String[]{CA});
+    void testBuildContextWhenClientAuthenticationIsOptional() throws Exception {
+        final SSLEngine sslEngine = assertSSlEngineFromBuilder(createSslSimpleBuilder()
+                .setClientAuthentication(SslClientVerifyMode.OPTIONAL, new String[]{CA})
+        );
 
-        assertSslSimpleBuilderBuildContext(SslSimpleBuilder);
+        assertFalse(sslEngine.getNeedClientAuth());
+        assertTrue(sslEngine.getWantClientAuth());
+    }
+
+    @Test
+    void testBuildContextWhenClientAuthenticationIsNone() throws Exception {
+        final SSLEngine sslEngine = assertSSlEngineFromBuilder(createSslSimpleBuilder()
+                .setClientAuthentication(SslClientVerifyMode.NONE, new String[]{CA}));
+
+        assertFalse(sslEngine.getNeedClientAuth());
+        assertFalse(sslEngine.getWantClientAuth());
     }
 
     @Test
     void testIsClientAuthenticationRequired() {
-        final SslSimpleBuilder SslSimpleBuilder = createSslSimpleBuilder();
+        final SslSimpleBuilder sslSimpleBuilder = createSslSimpleBuilder();
         final String[] certificateAuthorities = {CA};
 
-        SslSimpleBuilder.setClientAuthentication(SslClientVerifyMode.NONE, certificateAuthorities);
-        assertFalse(SslSimpleBuilder.isClientAuthenticationRequired());
+        sslSimpleBuilder.setClientAuthentication(SslClientVerifyMode.NONE, certificateAuthorities);
+        assertFalse(sslSimpleBuilder.isClientAuthenticationRequired());
 
-        SslSimpleBuilder.setClientAuthentication(SslClientVerifyMode.OPTIONAL, certificateAuthorities);
-        assertFalse(SslSimpleBuilder.isClientAuthenticationRequired());
+        sslSimpleBuilder.setClientAuthentication(SslClientVerifyMode.OPTIONAL, certificateAuthorities);
+        assertFalse(sslSimpleBuilder.isClientAuthenticationRequired());
 
-        SslSimpleBuilder.setClientAuthentication(SslClientVerifyMode.REQUIRED, certificateAuthorities);
-        assertTrue(SslSimpleBuilder.isClientAuthenticationRequired());
+        sslSimpleBuilder.setClientAuthentication(SslClientVerifyMode.REQUIRED, certificateAuthorities);
+        assertTrue(sslSimpleBuilder.isClientAuthenticationRequired());
     }
 
-    private void assertSslSimpleBuilderBuildContext(SslSimpleBuilder SslSimpleBuilder) throws Exception {
-        final SslContext context = SslSimpleBuilder.build();
-
+    private SSLEngine assertSSlEngineFromBuilder(SslSimpleBuilder sslSimpleBuilder) throws Exception {
+        final SslContext context = sslSimpleBuilder.build();
         assertTrue(context.isServer());
 
         final SSLEngine sslEngine = context.newEngine(ByteBufAllocator.DEFAULT);
-        assertThat(sslEngine.getEnabledCipherSuites(), equalTo(SslSimpleBuilder.getCiphers()));
-        assertThat(sslEngine.getEnabledProtocols(), equalTo(SslSimpleBuilder.getProtocols()));
+        assertThat(sslEngine.getEnabledCipherSuites(), equalTo(sslSimpleBuilder.getCiphers()));
+        assertThat(sslEngine.getEnabledProtocols(), equalTo(sslSimpleBuilder.getProtocols()));
 
-        if (SslSimpleBuilder.getVerifyMode() == SslClientVerifyMode.NONE) {
-            assertFalse(sslEngine.getNeedClientAuth());
-            assertFalse(sslEngine.getWantClientAuth());
-        } else if (SslSimpleBuilder.getVerifyMode() == SslClientVerifyMode.OPTIONAL) {
-            assertFalse(sslEngine.getNeedClientAuth());
-            assertTrue(sslEngine.getWantClientAuth());
-        } else {
-            assertTrue(sslEngine.getNeedClientAuth());
-            assertFalse(sslEngine.getWantClientAuth());
-        }
+        return sslEngine;
     }
 
     private SslSimpleBuilder createSslSimpleBuilder() {
