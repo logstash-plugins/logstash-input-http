@@ -1,5 +1,5 @@
 ## 3.7.0
- - Reviewed and deprecated SSL settings to comply with Logstash's naming convention [#164](https://github.com/logstash-plugins/logstash-input-http/pull/164)
+ - Reviewed and deprecated SSL settings to comply with Logstash's naming convention [#165](https://github.com/logstash-plugins/logstash-input-http/pull/165)
    - Deprecated `ssl` in favor of `ssl_enabled`
    - Deprecated `ssl_verify_mode` in favor of `ssl_client_authentication`
    - Deprecated `keystore` in favor of `ssl_keystore_path`
