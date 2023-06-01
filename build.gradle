@@ -11,7 +11,7 @@ version rootProject.file('VERSION').text.trim()
 description = "HTTP Input Netty implementation"
 
 String log4jVersion = '2.17.0'
-String nettyVersion = '4.1.87.Final'
+String nettyVersion = '4.1.93.Final'
 String junitVersion = '5.9.2'
 
 sourceCompatibility = 1.8
