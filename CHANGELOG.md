@@ -1,3 +1,6 @@
+## 3.7.1
+  - bump netty to 4.1.93 [#166](https://github.com/logstash-plugins/logstash-input-http/pull/166)
+
 ## 3.7.0
  - Reviewed and deprecated SSL settings to comply with Logstash's naming convention [#165](https://github.com/logstash-plugins/logstash-input-http/pull/165)
    - Deprecated `ssl` in favor of `ssl_enabled`
