@@ -1,3 +1,6 @@
+## 3.7.3
+  - bump netty to 4.1.100 [#170](https://github.com/logstash-plugins/logstash-input-http/pull/170)
+
 ## 3.7.2
   - bump netty to 4.1.94 [#167](https://github.com/logstash-plugins/logstash-input-http/pull/167)
 
