@@ -26,6 +26,7 @@ dependencies {
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
     testImplementation 'org.hamcrest:hamcrest-library:2.2'
     testImplementation "org.apache.logging.log4j:log4j-core:${log4jVersion}"
+    testImplementation 'org.elasticsearch:securemock:1.2'
 
     implementation "io.netty:netty-buffer:${nettyVersion}"
     implementation "io.netty:netty-codec:${nettyVersion}"

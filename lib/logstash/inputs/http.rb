@@ -76,11 +76,23 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # The JKS keystore password
   config :ssl_keystore_password, :validate => :password
 
-  # The JKS keystore to validate the client's certificates
+  # The path for the keystore file that contains a private key and certificate
   config :ssl_keystore_path, :validate => :path
+
+  # The format of the keystore file. It must be either jks or pkcs12
+  config :ssl_keystore_type, :validate => %w[pkcs12 jks]
 
   # SSL key passphrase to use.
   config :ssl_key_passphrase, :validate => :password
+
+  # Set the truststore password
+  config :ssl_truststore_password, :validate => :password
+
+  # The path for the keystore that contains the certificates to trust. It must be either a Java keystore (jks) or a PKCS#12 file
+  config :ssl_truststore_path, :validate => :path
+
+  # The format of the truststore file. It must be either jks or pkcs12
+  config  :ssl_truststore_type, :validate => %w[pkcs12 jks]
 
   # Validate client certificates against these authorities.
   # You can define multiple files or paths. All the certificates will
@@ -301,18 +313,31 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       raise LogStash::ConfigurationError, 'An `ssl_certificate` is required when using an `ssl_key`'
     end
 
-    unless ssl_key_configured? || ssl_jks_configured?
+    unless ssl_certificate_configured? || ssl_keystore_configured?
       raise LogStash::ConfigurationError, "Either an `ssl_certificate` or `ssl_keystore_path` is required when SSL is enabled `#{ssl_config_name} => true`"
     end
 
-    if require_certificate_authorities? && !certificate_authorities_configured?
-      config_name, optional, required = provided_client_authentication_config([SSL_CLIENT_AUTH_OPTIONAL, SSL_CLIENT_AUTH_REQUIRED])
-      raise LogStash::ConfigurationError, "Using `#{config_name}` set to `#{optional}` or `#{required}`, requires the configuration of `ssl_certificate_authorities`"
+    if ssl_certificate_configured? && ssl_keystore_configured?
+      raise LogStash::ConfigurationError, 'Use either an `ssl_certificate` or an `ssl_keystore_path`'
     end
 
-    if !require_certificate_authorities? && certificate_authorities_configured?
-      config_name, optional, required = provided_client_authentication_config([SSL_CLIENT_AUTH_OPTIONAL, SSL_CLIENT_AUTH_REQUIRED])
-      raise LogStash::ConfigurationError, "The configuration of `ssl_certificate_authorities` requires setting `#{config_name}` to `#{optional}` or '#{required}'"
+    if ssl_certificate_authorities_configured? && ssl_truststore_configured?
+      raise LogStash::ConfigurationError, 'Use either an `ssl_certificate_authorities` or an `ssl_truststore_path`'
+    end
+
+    cli_auth_config_name, cli_auth_optional_val, cli_auth_required_val = provided_ssl_client_authentication_config([SSL_CLIENT_AUTH_OPTIONAL, SSL_CLIENT_AUTH_REQUIRED])
+    if ssl_client_authentication_enabled?
+      # Ensure any CA is configured. By default, the keystore can also be used as CA
+      unless ssl_certificate_authorities_configured? || ssl_truststore_configured? || ssl_keystore_configured?
+        raise LogStash::ConfigurationError, "Using `#{cli_auth_config_name}` set to `#{cli_auth_optional_val}` or `#{cli_auth_required_val}`, requires the configuration of `ssl_certificate_authorities` or `ssl_truststore_path`"
+      end
+    else
+      if ssl_truststore_configured?
+        raise LogStash::ConfigurationError, "The configuration of `ssl_truststore_path` requires setting `#{cli_auth_config_name}` to `#{cli_auth_optional_val}` or '#{cli_auth_required_val}'"
+      end
+      if ssl_certificate_authorities_configured?
+        raise LogStash::ConfigurationError, "The configuration of `ssl_certificate_authorities` requires setting `#{cli_auth_config_name}` to `#{cli_auth_optional_val}` or '#{cli_auth_required_val}'"
+      end
     end
   end
 
@@ -372,73 +397,76 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   def build_ssl_params
     return nil unless @ssl_enabled
 
-    if @ssl_keystore_path && @ssl_keystore_password
-      ssl_builder = org.logstash.plugins.inputs.http.util.JksSslBuilder.new(@ssl_keystore_path, @ssl_keystore_password.value)
-    else
-      ssl_builder = new_ssl_simple_builder
-    end
-
-    new_ssl_handshake_provider(ssl_builder)
+    new_ssl_handshake_provider(new_ssl_simple_builder)
   end
 
   def new_ssl_simple_builder
-    passphrase = @ssl_key_passphrase.nil? ? nil : @ssl_key_passphrase.value
     begin
-      ssl_context_builder = SslSimpleBuilder.new(@ssl_certificate, @ssl_key, passphrase)
-                            .setProtocols(@ssl_supported_protocols)
-                            .setCipherSuites(normalized_cipher_suites)
+      if ssl_keystore_configured?
+        ssl_context_builder = SslSimpleBuilder.withKeyStore(@ssl_keystore_type, @ssl_keystore_path, @ssl_keystore_password&.value)
+      else
+        ssl_context_builder = SslSimpleBuilder.withPemCertificate(@ssl_certificate, @ssl_key, @ssl_key_passphrase&.value)
+      end
 
-      if client_authentication_enabled?
-        ssl_context_builder.setClientAuthentication(ssl_simple_builder_verify_mode, @ssl_certificate_authorities)
+      ssl_context_builder.setProtocols(@ssl_supported_protocols)
+                         .setCipherSuites(normalized_cipher_suites)
+                         .setClientAuthentication(ssl_simple_builder_verify_mode)
+
+      if ssl_client_authentication_enabled?
+        if ssl_certificate_authorities_configured?
+          ssl_context_builder.setCertificateAuthorities(@ssl_certificate_authorities)
+        elsif ssl_truststore_configured?
+          ssl_context_builder.setTrustStore(@ssl_truststore_type, @ssl_truststore_path, @ssl_truststore_password&.value)
+        end
       end
 
       ssl_context_builder
-    rescue java.lang.IllegalArgumentException => e
+    rescue => e
       @logger.error("SSL configuration invalid", error_details(e))
       raise LogStash::ConfigurationError, e
     end
   end
 
   def ssl_simple_builder_verify_mode
-    return SslSimpleBuilder::SslClientVerifyMode::OPTIONAL if client_authentication_optional?
-    return SslSimpleBuilder::SslClientVerifyMode::REQUIRED if client_authentication_required?
-    return SslSimpleBuilder::SslClientVerifyMode::NONE if client_authentication_none?
+    return SslSimpleBuilder::SslClientVerifyMode::OPTIONAL if ssl_client_authentication_optional?
+    return SslSimpleBuilder::SslClientVerifyMode::REQUIRED if ssl_client_authentication_required?
+    return SslSimpleBuilder::SslClientVerifyMode::NONE if ssl_client_authentication_none?
     raise LogStash::ConfigurationError, "Invalid `ssl_client_authentication` value #{@ssl_client_authentication}"
   end
 
-  def ssl_key_configured?
-    !!(@ssl_certificate && @ssl_key)
+  def ssl_certificate_configured?
+    !(@ssl_certificate.nil? || @ssl_certificate.empty?)
   end
 
-  def ssl_jks_configured?
-    !!(@ssl_keystore_path && @ssl_keystore_password)
+  def ssl_keystore_configured?
+    !(@ssl_keystore_path.nil? || @ssl_keystore_path.empty?)
   end
 
-  def client_authentication_enabled?
-    client_authentication_optional? || client_authentication_required?
+  def ssl_truststore_configured?
+    !(@ssl_truststore_path.nil? || @ssl_truststore_path.empty?)
   end
 
-  def require_certificate_authorities?
-    client_authentication_required? || client_authentication_optional?
+  def ssl_client_authentication_enabled?
+    ssl_client_authentication_optional? || ssl_client_authentication_required?
   end
 
-  def certificate_authorities_configured?
+  def ssl_certificate_authorities_configured?
     @ssl_certificate_authorities && @ssl_certificate_authorities.size > 0
   end
 
-  def client_authentication_required?
+  def ssl_client_authentication_required?
     @ssl_client_authentication && @ssl_client_authentication.downcase == SSL_CLIENT_AUTH_REQUIRED
   end
 
-  def client_authentication_none?
+  def ssl_client_authentication_none?
     @ssl_client_authentication && @ssl_client_authentication.downcase == SSL_CLIENT_AUTH_NONE
   end
 
-  def client_authentication_optional?
+  def ssl_client_authentication_optional?
     @ssl_client_authentication && @ssl_client_authentication.downcase == SSL_CLIENT_AUTH_OPTIONAL
   end
 
-  def provided_client_authentication_config(values = [@ssl_client_authentication])
+  def provided_ssl_client_authentication_config(values = [@ssl_client_authentication])
     if original_params.include?('ssl_verify_mode')
       ['ssl_verify_mode', *values.map { |v| SSL_VERIFY_MODE_TO_CLIENT_AUTHENTICATION_MAP.key(v) }]
     elsif original_params.include?('verify_mode')
