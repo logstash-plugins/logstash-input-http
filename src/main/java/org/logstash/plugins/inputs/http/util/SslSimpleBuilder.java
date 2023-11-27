@@ -205,7 +205,7 @@ public class SslSimpleBuilder implements SslBuilder {
 
     public SslContext build() throws Exception {
         if (this.trustStore != null && this.certificateAuthorities != null) {
-            throw new IllegalStateException("Use either an SSL certificate authorities or a Trust Store to configure client authentication");
+            throw new IllegalStateException("Use either a bundle of Certificate Authorities or a Trust Store to configure client authentication");
         }
 
         if (logger.isDebugEnabled()) {
@@ -244,7 +244,7 @@ public class SslSimpleBuilder implements SslBuilder {
             return SslContextBuilder.forServer(createKeyManagerFactory());
         }
 
-        throw new IllegalStateException("Either an KeyStore or an SSL certificate must be provided");
+        throw new IllegalStateException("Either a KeyStore or an SSL certificate must be provided");
     }
 
     private KeyManagerFactory createKeyManagerFactory() throws NoSuchAlgorithmException, UnrecoverableKeyException, KeyStoreException {
