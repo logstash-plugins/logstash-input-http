@@ -328,7 +328,7 @@ class SslSimpleBuilderTest {
                 sslSimpleBuilder::build
         );
 
-        assertEquals("Use either an SSL certificate authorities or a Trust Store to configure client authentication", thrown.getMessage());
+        assertEquals("Use either a bundle of Certificate Authorities or a Trust Store to configure client authentication", thrown.getMessage());
     }
 
     @Test
