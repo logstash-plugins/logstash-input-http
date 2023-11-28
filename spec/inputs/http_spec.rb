@@ -798,7 +798,7 @@ describe LogStash::Inputs::Http do
           end
 
           context "with ssl_truststore_path set" do
-            let(:config) { super().merge("ssl_truststore_path" => [certificate_path( 'server_from_root.p12')], "ssl_truststore_password" => "12345678") }
+            let(:config) { super().merge("ssl_truststore_path" => certificate_path('truststore.jks'), "ssl_truststore_password" => "12345678") }
 
             it "raise a configuration error" do
               expect {subject.register}.to raise_error(LogStash::ConfigurationError, "The configuration of `ssl_truststore_path` requires setting `ssl_client_authentication` to `optional` or 'required'")
@@ -821,11 +821,20 @@ describe LogStash::Inputs::Http do
             end
           end
 
-          context "with ssl_truststore_path set" do
-            let(:config) { super().merge("ssl_truststore_path" => [certificate_path( 'server_from_root.p12')], "ssl_truststore_password" => "12345678") }
+          context "with ssl_truststore_path set to a valid truststore" do
+            let(:config) { super().merge("ssl_truststore_path" => certificate_path('truststore.jks'), "ssl_truststore_password" => "12345678") }
 
             it "doesn't raise a configuration error" do
               expect {subject.register}.not_to raise_error
+            end
+          end
+
+          context "with ssl_truststore_path set with no trusted certificate" do
+            let(:truststore_path) { certificate_path('server_from_root.p12') }
+            let(:config) { super().merge("ssl_truststore_path" => truststore_path, "ssl_truststore_password" => "12345678") }
+
+            it "raise a configuration error" do
+              expect {subject.register}.to raise_error(LogStash::ConfigurationError, "The provided Trust Store file does not contains any trusted certificate entry: #{truststore_path}")
             end
           end
         end
@@ -846,7 +855,15 @@ describe LogStash::Inputs::Http do
           end
 
           context "with ssl_truststore_path set" do
-            let(:config) { super().merge("ssl_truststore_path" => [certificate_path( 'server_from_root.p12')], "ssl_truststore_password" => "12345678") }
+            let(:config) { super().merge("ssl_truststore_path" => certificate_path('truststore.jks'), "ssl_truststore_password" => "12345678") }
+
+            it "doesn't raise a configuration error" do
+              expect {subject.register}.not_to raise_error
+            end
+          end
+
+          context "with ssl_truststore_path set with no trusted certificate" do
+            let(:config) { super().merge("ssl_truststore_path" => certificate_path('server_from_root.p12'), "ssl_truststore_password" => "12345678") }
 
             it "doesn't raise a configuration error" do
               expect {subject.register}.not_to raise_error

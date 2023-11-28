@@ -212,6 +212,17 @@ class SslSimpleBuilderTest {
     }
 
     @Test
+    void testSetTrustStoreWithNoTrustedCertificate() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> createPemSslSimpleBuilder()
+                        .setClientAuthentication(SslClientVerifyMode.REQUIRED)
+                        .setTrustStore(KEYSTORE_TYPE, KEYSTORE, KEYSTORE_PASSWORD),
+                String.format("The provided Trust Store file does not contains any trusted certificate entry: %s", KEYSTORE)
+        );
+    }
+
+    @Test
     void testDefaultVerifyModeIsNone() {
         final SslSimpleBuilder sslSimpleBuilder = createPemSslSimpleBuilder();
         assertThat(sslSimpleBuilder.getVerifyMode(), is(SslClientVerifyMode.NONE));

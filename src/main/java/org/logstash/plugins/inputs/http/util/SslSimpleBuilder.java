@@ -188,8 +188,8 @@ public class SslSimpleBuilder implements SslBuilder {
                 formatJksPassword(trustStorePassword)
         );
 
-        if (!hasTrustStoreEntry(this.trustStore)) {
-            logger.warn("The provided Trust Store file does not contains any trusted certificate entry: {}. Please confirm this is the correct certificate and the password is correct", trustStoreFile);
+        if (!hasTrustStoreEntry(this.trustStore) && isClientAuthenticationRequired()) {
+            throw new IllegalArgumentException(String.format("The provided Trust Store file does not contains any trusted certificate entry: %s", trustStoreFile));
         }
 
         return this;
