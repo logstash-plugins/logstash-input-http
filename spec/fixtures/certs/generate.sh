@@ -12,11 +12,16 @@ echo "DO NOT USE THESE CERTIFICATES IN PRODUCTION" >> ./README.txt
 # certificate authority
 openssl genrsa -out root.key 4096
 openssl req -new -x509 -days 1826 -extensions ca -key root.key -out root.crt -subj "/C=LS/ST=NA/L=Http Input/O=Logstash/CN=root" -config ../openssl.cnf
+# using keytool here as openssl < 3.2 won't add the "2.16.840.1.113894.746875.1.1" OID to make the cert "trusted" # See more:
+# * https://github.com/openssl/openssl/pull/19025
+# * https://github.com/openssl/openssl/commit/e869c867c1c405de3b6538586f17b67937556a4b
+keytool -import -file root.crt -alias rootCA -keystore truststore.jks -noprompt -storepass 12345678
 
 # server certificate from root
 openssl genrsa -out server_from_root.key 4096
 openssl req -new -key server_from_root.key -out server_from_root.csr -subj "/C=LS/ST=NA/L=Http Input/O=Logstash/CN=server" -config ../openssl.cnf
 openssl x509 -req -extensions server_cert -extfile ../openssl.cnf -days 1096 -in server_from_root.csr -CA root.crt -CAkey root.key -set_serial 03 -out server_from_root.crt
+openssl pkcs12 -export -out server_from_root.p12 -inkey server_from_root.key -in server_from_root.crt -certfile root.crt -password pass:12345678
 
 # client certificate from root
 openssl genrsa -out client_from_root.key 4096

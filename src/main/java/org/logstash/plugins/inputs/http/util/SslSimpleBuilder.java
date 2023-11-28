@@ -10,18 +10,30 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 import javax.crypto.Cipher;
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
 
 public class SslSimpleBuilder implements SslBuilder {
 
@@ -86,26 +98,47 @@ public class SslSimpleBuilder implements SslBuilder {
 
     private String[] protocols = new String[] { "TLSv1.2", "TLSv1.3" };
     private String[] ciphers = getDefaultCiphers();
-    private final File sslKeyFile;
-    private final File sslCertificateFile;
+    private File sslKeyFile;
+    private File sslCertificateFile;
     private String[] certificateAuthorities;
-    private final String passphrase;
+    private KeyStore keyStore;
+    private char[] keyStorePassword;
+    private KeyStore trustStore;
+    private String passphrase;
     private SslClientVerifyMode verifyMode = SslClientVerifyMode.NONE;
 
-    public SslSimpleBuilder(String sslCertificateFilePath, String sslKeyFilePath, String pass) {
-        sslCertificateFile = new File(sslCertificateFilePath);
-        if (!sslCertificateFile.canRead()) {
+    public static SslSimpleBuilder withPemCertificate(String sslCertificateFilePath, String sslKeyFilePath, String pass) {
+        SslSimpleBuilder builder = new SslSimpleBuilder();
+
+        builder.sslCertificateFile = new File(sslCertificateFilePath);
+        if (!builder.sslCertificateFile.canRead()) {
             throw new IllegalArgumentException(
                     String.format("Certificate file cannot be read. Please confirm the user running Logstash has permissions to read: %s", sslCertificateFilePath));
         }
 
-        sslKeyFile = new File(sslKeyFilePath);
-        if (!sslKeyFile.canRead()) {
+        builder.sslKeyFile = new File(sslKeyFilePath);
+        if (!builder.sslKeyFile.canRead()) {
             throw new IllegalArgumentException(
                     String.format("Private key file cannot be read. Please confirm the user running Logstash has permissions to read: %s", sslKeyFilePath));
         }
 
-        passphrase = pass;
+        builder.passphrase = pass;
+        return builder;
+    }
+
+    public static SslSimpleBuilder withKeyStore(String keyStoreType, String keyStoreFile, String keyStorePassword) throws Exception {
+        SslSimpleBuilder builder = new SslSimpleBuilder();
+        final Path keyStorePath = Paths.get(Objects.requireNonNull(keyStoreFile, "Keystore path cannot be null"));
+        if (!Files.isReadable(keyStorePath)) {
+            throw new IllegalArgumentException(String.format("Keystore file cannot be read. Please confirm the user running Logstash has permissions to read: %s", keyStoreFile));
+        }
+
+        builder.keyStorePassword = formatJksPassword(keyStorePassword);
+        builder.keyStore = readKeyStore(keyStorePath, resolveKeyStoreType(keyStoreType, keyStorePath), builder.keyStorePassword);
+        return builder;
+    }
+
+    private SslSimpleBuilder() {
     }
 
     public SslSimpleBuilder setProtocols(String[] protocols) {
@@ -129,13 +162,36 @@ public class SslSimpleBuilder implements SslBuilder {
         return this;
     }
 
-    public SslSimpleBuilder setClientAuthentication(SslClientVerifyMode verifyMode, String[] certificateAuthorities) {
-        if (isClientAuthenticationEnabled(verifyMode) && (certificateAuthorities == null || certificateAuthorities.length < 1)) {
-            throw new IllegalArgumentException("Certificate authorities are required to enable client authentication");
+    public SslSimpleBuilder setClientAuthentication(SslClientVerifyMode verifyMode) {
+        this.verifyMode = verifyMode;
+        return this;
+    }
+
+    public SslSimpleBuilder setCertificateAuthorities(String[] certificateAuthorities) {
+        if (certificateAuthorities == null || certificateAuthorities.length == 0){
+            throw new IllegalArgumentException("SSL certificate authorities is required");
         }
 
-        this.verifyMode = verifyMode;
         this.certificateAuthorities = certificateAuthorities;
+        return this;
+    }
+
+    public SslSimpleBuilder setTrustStore(String trustStoreType, String trustStoreFile, String trustStorePassword) throws Exception {
+        final Path trustStorePath = Paths.get(Objects.requireNonNull(trustStoreFile, "Trust Store path cannot be null"));
+        if (!Files.isReadable(trustStorePath)) {
+            throw new IllegalArgumentException(String.format("Trust Store file cannot be read. Please confirm the user running Logstash has permissions to read: %s", trustStoreFile));
+        }
+
+        this.trustStore = readKeyStore(
+                trustStorePath,
+                resolveKeyStoreType(trustStoreType, trustStorePath),
+                formatJksPassword(trustStorePassword)
+        );
+
+        if (!hasTrustStoreEntry(this.trustStore) && isClientAuthenticationRequired()) {
+            throw new IllegalArgumentException(String.format("The provided Trust Store file does not contains any trusted certificate entry: %s", trustStoreFile));
+        }
+
         return this;
     }
 
@@ -148,26 +204,78 @@ public class SslSimpleBuilder implements SslBuilder {
     }
 
     public SslContext build() throws Exception {
+        if (this.trustStore != null && this.certificateAuthorities != null) {
+            throw new IllegalStateException("Use either a bundle of Certificate Authorities or a Trust Store to configure client authentication");
+        }
+
         if (logger.isDebugEnabled()) {
             logger.debug("Available ciphers: {}", SUPPORTED_CIPHERS);
             logger.debug("Ciphers: {}", Arrays.toString(ciphers));
         }
 
-        SslContextBuilder builder = SslContextBuilder
-                .forServer(sslCertificateFile, sslKeyFile, passphrase)
+        SslContextBuilder builder = createSslContextBuilder()
                 .ciphers(Arrays.asList(ciphers))
-                .protocols(protocols);
+                .protocols(protocols)
+                .clientAuth(verifyMode.toClientAuth());
 
         if (isClientAuthenticationEnabled(verifyMode)) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Certificate Authorities: {}", Arrays.toString(certificateAuthorities));
-            }
+            if (certificateAuthorities != null) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Certificate Authorities: {}", Arrays.toString(certificateAuthorities));
+                }
 
-            builder.clientAuth(verifyMode.toClientAuth())
-                    .trustManager(loadCertificateCollection(certificateAuthorities));
+                builder.trustManager(loadCertificateCollection(certificateAuthorities));
+            } else if (trustStore != null || keyStore != null) {
+                builder.trustManager(createTrustManagerFactory());
+            } else {
+                throw new IllegalStateException("Either an SSL certificate or an SSL Trust Store is required when SSL is enabled");
+            }
         }
 
         return doBuild(builder);
+    }
+
+    private SslContextBuilder createSslContextBuilder() throws Exception {
+        if (sslCertificateFile != null) {
+            return SslContextBuilder.forServer(sslCertificateFile, sslKeyFile, passphrase);
+        }
+
+        if (keyStore != null) {
+            return SslContextBuilder.forServer(createKeyManagerFactory());
+        }
+
+        throw new IllegalStateException("Either a KeyStore or an SSL certificate must be provided");
+    }
+
+    private KeyManagerFactory createKeyManagerFactory() throws NoSuchAlgorithmException, UnrecoverableKeyException, KeyStoreException {
+        final KeyManagerFactory kmf = getDefaultKeyManagerFactory();
+        kmf.init(this.keyStore, this.keyStorePassword);
+        return kmf;
+    }
+
+    KeyManagerFactory getDefaultKeyManagerFactory() throws NoSuchAlgorithmException {
+        return KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+    }
+
+    private TrustManagerFactory createTrustManagerFactory() throws Exception {
+        final TrustManagerFactory tmf = getDefaultTrustManagerFactory();
+        if (this.trustStore == null) {
+            logger.info("SSL Trust Store not configured, using the provided Key Store instead.");
+
+            if (logger.isDebugEnabled() && !hasTrustStoreEntry(this.keyStore)) {
+                logger.debug("The provided SSL Key Store, used as Trust Store, has no trusted certificate entry.");
+            }
+
+            tmf.init(this.keyStore);
+            return tmf;
+        }
+
+        tmf.init(this.trustStore);
+        return tmf;
+    }
+
+    TrustManagerFactory getDefaultTrustManagerFactory() throws NoSuchAlgorithmException {
+        return TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
     }
 
     // NOTE: copy-pasta from input-beats
@@ -239,5 +347,59 @@ public class SslSimpleBuilder implements SslBuilder {
 
     SslClientVerifyMode getVerifyMode() {
         return verifyMode;
+    }
+
+    static String resolveKeyStoreType(String type, Path path) {
+        if (type == null || type.isEmpty()) {
+            return inferKeyStoreType(path);
+        }
+        return type;
+    }
+
+    private static String inferKeyStoreType(Path path) {
+        String name = path == null ? "" : path.getFileName().toString().toLowerCase(Locale.ROOT);
+        if (name.endsWith(".p12") || name.endsWith(".pfx") || name.endsWith(".pkcs12")) {
+            return "PKCS12";
+        } else {
+            return "jks";
+        }
+    }
+
+    private static char[] formatJksPassword(String password) {
+        if (password == null){
+            return null;
+        }
+
+        return password.toCharArray();
+    }
+
+    private static KeyStore readKeyStore(Path path, String ksType, char[] password) throws GeneralSecurityException, IOException {
+        final KeyStore keyStore = KeyStore.getInstance(ksType);
+        if (path != null) {
+            try (InputStream in = Files.newInputStream(path)) {
+                keyStore.load(in, password);
+            }
+        }
+        return keyStore;
+    }
+
+    private boolean hasTrustStoreEntry(KeyStore store) throws GeneralSecurityException {
+        Enumeration<String> aliases = store.aliases();
+        while (aliases.hasMoreElements()) {
+            String alias = aliases.nextElement();
+            if (store.isCertificateEntry(alias)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    KeyStore getKeyStore() {
+        return keyStore;
+    }
+
+    KeyStore getTrustStore() {
+        return trustStore;
     }
 }

@@ -1,3 +1,8 @@
+## 3.8.0
+  - Fixed SSL Java KeyStore support  [#171](https://github.com/logstash-plugins/logstash-input-http/pull/171)
+  - Added `ssl_keystore_type` configuration
+  - Added SSL Java TrustStore configurations (`ssl_truststore_type`, `ssl_truststore_path` and `ssl_truststore_password`)
+
 ## 3.7.3
   - bump netty to 4.1.100 [#170](https://github.com/logstash-plugins/logstash-input-http/pull/170)
 

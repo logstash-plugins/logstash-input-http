@@ -735,6 +735,16 @@ describe LogStash::Inputs::Http do
         end
       end
 
+      context "and with :ssl_keystore_path" do
+        let(:config) do
+          super().merge('ssl_keystore_path' => certificate_path( 'server_from_root.p12'), 'ssl_enabled' => true )
+        end
+
+        it "should raise a configuration error" do
+          expect { subject.register }.to raise_error LogStash::ConfigurationError, /Use either an `ssl_certificate` or an `ssl_keystore_path`/i
+        end
+      end
+
       context "with ssl_client_authentication" do
         context "normalized from ssl_verify_mode 'none'" do
           let(:config) { super().merge("ssl_verify_mode" => "none") }
@@ -766,7 +776,7 @@ describe LogStash::Inputs::Http do
             context "with no ssl_certificate_authorities set " do
               let(:config) { super().reject { |key| "ssl_certificate_authorities".eql?(key) } }
               it "raise a configuration error" do
-                expect {subject.register}.to raise_error(LogStash::ConfigurationError, "Using `ssl_verify_mode` set to `peer` or `force_peer`, requires the configuration of `ssl_certificate_authorities`")
+                expect {subject.register}.to raise_error(LogStash::ConfigurationError, "Using `ssl_verify_mode` set to `peer` or `force_peer`, requires the configuration of `ssl_certificate_authorities` or `ssl_truststore_path`")
               end
             end
           end
@@ -786,13 +796,21 @@ describe LogStash::Inputs::Http do
               expect {subject.register}.to raise_error(LogStash::ConfigurationError, "The configuration of `ssl_certificate_authorities` requires setting `ssl_client_authentication` to `optional` or 'required'")
             end
           end
+
+          context "with ssl_truststore_path set" do
+            let(:config) { super().merge("ssl_truststore_path" => certificate_path('truststore.jks'), "ssl_truststore_password" => "12345678") }
+
+            it "raise a configuration error" do
+              expect {subject.register}.to raise_error(LogStash::ConfigurationError, "The configuration of `ssl_truststore_path` requires setting `ssl_client_authentication` to `optional` or 'required'")
+            end
+          end
         end
 
         context "configured to 'required'" do
           let(:config) { super().merge("ssl_client_authentication" => "required") }
 
           it "raise a ConfigurationError when certificate_authorities is not set" do
-            expect {subject.register}.to raise_error(LogStash::ConfigurationError, "Using `ssl_client_authentication` set to `optional` or `required`, requires the configuration of `ssl_certificate_authorities`")
+            expect {subject.register}.to raise_error(LogStash::ConfigurationError, "Using `ssl_client_authentication` set to `optional` or `required`, requires the configuration of `ssl_certificate_authorities` or `ssl_truststore_path`")
           end
 
           context "with ssl_certificate_authorities set" do
@@ -802,13 +820,30 @@ describe LogStash::Inputs::Http do
               expect {subject.register}.not_to raise_error
             end
           end
+
+          context "with ssl_truststore_path set to a valid truststore" do
+            let(:config) { super().merge("ssl_truststore_path" => certificate_path('truststore.jks'), "ssl_truststore_password" => "12345678") }
+
+            it "doesn't raise a configuration error" do
+              expect {subject.register}.not_to raise_error
+            end
+          end
+
+          context "with ssl_truststore_path set with no trusted certificate" do
+            let(:truststore_path) { certificate_path('server_from_root.p12') }
+            let(:config) { super().merge("ssl_truststore_path" => truststore_path, "ssl_truststore_password" => "12345678") }
+
+            it "raise a configuration error" do
+              expect {subject.register}.to raise_error(LogStash::ConfigurationError, "The provided Trust Store file does not contains any trusted certificate entry: #{truststore_path}")
+            end
+          end
         end
 
         context "configured to 'optional'" do
           let(:config) { super().merge("ssl_client_authentication" => "optional") }
 
           it "raise a ConfigurationError when certificate_authorities is not set" do
-            expect {subject.register}.to raise_error(LogStash::ConfigurationError, "Using `ssl_client_authentication` set to `optional` or `required`, requires the configuration of `ssl_certificate_authorities`")
+            expect {subject.register}.to raise_error(LogStash::ConfigurationError, "Using `ssl_client_authentication` set to `optional` or `required`, requires the configuration of `ssl_certificate_authorities` or `ssl_truststore_path`")
           end
 
           context "with certificate_authorities set" do
@@ -818,9 +853,71 @@ describe LogStash::Inputs::Http do
               expect {subject.register}.not_to raise_error
             end
           end
+
+          context "with ssl_truststore_path set" do
+            let(:config) { super().merge("ssl_truststore_path" => certificate_path('truststore.jks'), "ssl_truststore_password" => "12345678") }
+
+            it "doesn't raise a configuration error" do
+              expect {subject.register}.not_to raise_error
+            end
+          end
+
+          context "with ssl_truststore_path set with no trusted certificate" do
+            let(:config) { super().merge("ssl_truststore_path" => certificate_path('server_from_root.p12'), "ssl_truststore_password" => "12345678") }
+
+            it "doesn't raise a configuration error" do
+              expect {subject.register}.not_to raise_error
+            end
+          end
         end
       end
     end
+    context "with :ssl_keystore_path" do
+      let(:config) do
+        {
+          "port" => port,
+          "ssl_enabled" => true,
+          "ssl_keystore_path" => certificate_path( 'server_from_root.p12'),
+          "ssl_keystore_password" => "12345678"
+        }
+      end
+
+      subject { LogStash::Inputs::Http.new(config) }
+
+      it "should not raise exception" do
+        expect { subject.register }.to_not raise_exception
+      end
+    end
+    context "with :ssl_truststore_path" do
+      let(:config) do
+        {
+          "port" => port,
+          "ssl_enabled" => true,
+          "ssl_client_authentication" => "optional",
+          "ssl_keystore_path" => certificate_path( 'server_from_root.p12'),
+          "ssl_keystore_password" => "12345678",
+          "ssl_truststore_path" => certificate_path( 'truststore.jks'),
+          "ssl_truststore_password" => "12345678"
+        }
+      end
+
+      subject { LogStash::Inputs::Http.new(config) }
+
+      it "should not raise exception" do
+        expect { subject.register }.to_not raise_exception
+      end
+
+      context "and with :ssl_certificate_authorities configured" do
+        let(:config) do
+          super().merge('ssl_certificate_authorities' => [certificate_path( 'root.crt')], 'ssl_enabled' => true )
+        end
+
+        it "should raise a configuration error" do
+          expect { subject.register }.to raise_error LogStash::ConfigurationError, /Use either an `ssl_certificate_authorities` or an `ssl_truststore_path`/i
+        end
+      end
+    end
+
   end
 end
 
