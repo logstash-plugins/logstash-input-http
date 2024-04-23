@@ -1,5 +1,5 @@
 ## 3.8.1
-  - bump netty to 4.1.109 [#n](https://github.com/logstash-plugins/logstash-input-http/pull/n)
+  - bump netty to 4.1.109 [#173](https://github.com/logstash-plugins/logstash-input-http/pull/173)
 
 ## 3.8.0
   - Fixed SSL Java KeyStore support  [#171](https://github.com/logstash-plugins/logstash-input-http/pull/171)
