@@ -17,9 +17,9 @@ import java.security.Security;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.elasticsearch.mock.orig.Mockito.spy;
-import static org.elasticsearch.mock.orig.Mockito.verify;
-import static org.elasticsearch.mock.orig.Mockito.when;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.isIn;
@@ -45,7 +45,7 @@ import static org.logstash.plugins.inputs.http.util.TestCertificates.KEY_ENCRYPT
 import static org.logstash.plugins.inputs.http.util.TestCertificates.TRUSTSTORE;
 import static org.logstash.plugins.inputs.http.util.TestCertificates.TRUSTSTORE_PASSWORD;
 import static org.logstash.plugins.inputs.http.util.TestCertificates.TRUSTSTORE_TYPE;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.eq;
 
 /**
  * Unit test for {@link SslSimpleBuilder}
