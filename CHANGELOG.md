@@ -1,3 +1,7 @@
+## 3.9.0
+ - Netty boss and worker groups are separated [#178](https://github.com/logstash-plugins/logstash-input-http/pull/178)
+   As a result, when shutdown requested incoming connections are closed first and improved graceful shutdown
+
 ## 3.8.1
   - bump netty to 4.1.109 [#173](https://github.com/logstash-plugins/logstash-input-http/pull/173)
 
