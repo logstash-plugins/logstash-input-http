@@ -15,8 +15,8 @@ import java.util.function.LongSupplier;
  * </p>
  */
 public class ExecutionObserver {
-    private final AtomicReference<Execution> head; // newest execution
-    private final AtomicReference<Execution> tail; // oldest execution
+    private final AtomicReference<Execution> tail; // newest execution
+    private final AtomicReference<Execution> head; // oldest execution
 
     private final LongSupplier nanosSupplier;
 
@@ -27,8 +27,8 @@ public class ExecutionObserver {
     ExecutionObserver(final LongSupplier nanosSupplier) {
         this.nanosSupplier = nanosSupplier;
         final Execution anchor = new Execution(nanosSupplier.getAsLong(), true);
-        this.head = new AtomicReference<>(anchor);
         this.tail = new AtomicReference<>(anchor);
+        this.head = new AtomicReference<>(anchor);
     }
 
     /**
@@ -44,21 +44,21 @@ public class ExecutionObserver {
      * @return true if any active execution has been running for at least the provided {@code Duration}
      */
     public boolean anyExecuting(final Duration minimumDuration) {
-        final Execution tailExecution = compactTail();
-        if (tailExecution.isComplete) {
+        final Execution headExecution = compactHead();
+        if (headExecution.isComplete) {
             return false;
         } else {
-            return nanosSupplier.getAsLong() - tailExecution.startNanos >= minimumDuration.toNanos();
+            return nanosSupplier.getAsLong() - headExecution.startNanos >= minimumDuration.toNanos();
         }
     }
 
     // visible for test
     Optional<Duration> longestExecuting() {
-        final Execution tailExecution = compactTail();
-        if (tailExecution.isComplete) {
+        final Execution headExecution = compactHead();
+        if (headExecution.isComplete) {
             return Optional.empty();
         } else {
-            return Optional.of(Duration.ofNanos(nanosSupplier.getAsLong() - tailExecution.startNanos));
+            return Optional.of(Duration.ofNanos(nanosSupplier.getAsLong() - headExecution.startNanos));
         }
     }
 
@@ -67,7 +67,7 @@ public class ExecutionObserver {
         int nodes = 0;
         int executing = 0;
 
-        Execution candidate = this.tail.get();
+        Execution candidate = this.head.get();
         while (candidate != null) {
             nodes += 1;
             if (!candidate.isComplete) {
@@ -100,7 +100,7 @@ public class ExecutionObserver {
         } finally {
             final boolean isCompact = execution.markComplete();
             if (!isCompact) {
-                this.compactTail();
+                this.compactHead();
             }
         }
     }
@@ -116,18 +116,18 @@ public class ExecutionObserver {
 
     // visible for test
     Execution startExecution() {
-        final Execution newHead = new Execution(nanosSupplier.getAsLong());
+        final Execution newTail = new Execution(nanosSupplier.getAsLong());
 
-        // atomically attach the new execution as a new (detached) head
-        final Execution oldHead = this.head.getAndSet(newHead);
-        // attach our new head to the old one
-        oldHead.linkNext(newHead);
+        // atomically attach the new execution as a new (detached) tail
+        final Execution oldTail = this.tail.getAndSet(newTail);
+        // attach our new tail to the old one
+        oldTail.linkNext(newTail);
 
-        return newHead;
+        return newTail;
     }
 
-    private Execution compactTail() {
-        return this.tail.updateAndGet(Execution::chaseTail);
+    private Execution compactHead() {
+        return this.head.updateAndGet(Execution::seekHead);
     }
 
     static class Execution {
@@ -167,7 +167,7 @@ public class ExecutionObserver {
             // completed nodes remaining as the result of a race
             final Execution preCompletionNext = this.getNextPlain();
             if (preCompletionNext != null) {
-                final Execution newNext = preCompletionNext.chaseTail();
+                final Execution newNext = preCompletionNext.seekHead();
                 return (newNext != preCompletionNext) && NEXT.compareAndSet(this, preCompletionNext, newNext);
             }
             return false;
@@ -182,16 +182,16 @@ public class ExecutionObserver {
 
         /**
          * @return the next {@code Execution} that is either not yet complete
-         *         or is the current head, using plain memory access.
+         *         or is the current tail, using plain memory access.
          */
-        private Execution chaseTail() {
-            Execution compactedTail = this;
+        private Execution seekHead() {
+            Execution compactedHead = this;
             Execution candidate = this.getNextPlain();
-            while (candidate != null && compactedTail.isComplete) {
-                compactedTail = candidate;
+            while (candidate != null && compactedHead.isComplete) {
+                compactedHead = candidate;
                 candidate = candidate.getNextPlain();
             }
-            return compactedTail;
+            return compactedHead;
         }
 
         private Execution getNextPlain() {
