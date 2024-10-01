@@ -1,6 +1,5 @@
 package org.logstash.plugins.inputs.http.util;
 
-import java.lang.invoke.MethodHandles;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
@@ -73,7 +72,7 @@ public class ExecutionObserver {
             if (!candidate.isComplete) {
                 executing += 1;
             }
-            candidate = candidate.getNextPlain();
+            candidate = candidate.next.get();
         }
         return new Stats(nodes, executing);
     }
@@ -131,20 +130,11 @@ public class ExecutionObserver {
     }
 
     static class Execution {
-        private static final java.lang.invoke.VarHandle NEXT;
-        static {
-            try {
-                MethodHandles.Lookup l = MethodHandles.lookup();
-                NEXT = l.findVarHandle(Execution.class, "next", Execution.class);
-            } catch (ReflectiveOperationException e) {
-                throw new ExceptionInInitializerError(e);
-            }
-        }
 
         private final long startNanos;
 
         private volatile boolean isComplete;
-        private volatile Execution next;
+        private final AtomicReference<Execution> next = new AtomicReference<>();
 
         Execution(long startNanos) {
             this(startNanos, false);
@@ -163,39 +153,34 @@ public class ExecutionObserver {
         boolean markComplete() {
             isComplete = true;
 
-            // concurrency: use plain memory for reads because we can tolerate
-            // completed nodes remaining as the result of a race
-            final Execution preCompletionNext = this.getNextPlain();
+            final Execution preCompletionNext = this.next.get();
             if (preCompletionNext != null) {
-                final Execution newNext = preCompletionNext.seekHead();
-                return (newNext != preCompletionNext) && NEXT.compareAndSet(this, preCompletionNext, newNext);
+                final Execution result = this.next.updateAndGet(Execution::seekHead);
+                return result != preCompletionNext;
             }
+
             return false;
         }
 
         private void linkNext(final Execution proposedNext) {
-            final Execution witness = (Execution)NEXT.compareAndExchange(this, null, proposedNext);
-            if (witness != null && witness != proposedNext) {
+            final Execution result = next.updateAndGet((ex) -> ex == null ? proposedNext : ex);
+            if (result != proposedNext) {
                 throw new IllegalStateException();
             }
         }
 
         /**
-         * @return the next {@code Execution} that is either not yet complete
-         *         or is the current tail, using plain memory access.
+         * @return the first {@code Execution} that is either not yet complete
+         *         or is the current tail, possibly itself.
          */
         private Execution seekHead() {
             Execution compactedHead = this;
-            Execution candidate = this.getNextPlain();
+            Execution candidate = this.next.get();
             while (candidate != null && compactedHead.isComplete) {
                 compactedHead = candidate;
-                candidate = candidate.getNextPlain();
+                candidate = candidate.next.get();
             }
             return compactedHead;
-        }
-
-        private Execution getNextPlain() {
-            return (Execution) NEXT.get(this);
         }
     }
 }
