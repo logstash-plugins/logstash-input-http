@@ -1,3 +1,6 @@
+## 3.10.0
+- add improved proactive rate-limiting, rejecting new requests when queue has been actively blocking for more than 10 seconds [#179](https://github.com/logstash-plugins/logstash-input-http/pull/179)
+
 ## 3.9.0
  - Netty boss and worker groups are separated [#178](https://github.com/logstash-plugins/logstash-input-http/pull/178)
    As a result, when shutdown requested incoming connections are closed first and improved graceful shutdown
