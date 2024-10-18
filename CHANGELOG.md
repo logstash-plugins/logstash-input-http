@@ -1,3 +1,6 @@
+## 3.9.1
+ - Correctly log the state of `ssl_enabled` during `run`
+
 ## 3.9.0
  - Netty boss and worker groups are separated [#178](https://github.com/logstash-plugins/logstash-input-http/pull/178)
    As a result, when shutdown requested incoming connections are closed first and improved graceful shutdown
