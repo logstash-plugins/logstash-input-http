@@ -545,18 +545,18 @@ describe LogStash::Inputs::Http do
     end
 
     context "during run" do
-      let(:http_server) {
+      let(:http_server) do
         http_server = double(:http_server)
         allow(http_server).to receive(:close)
         allow(http_server).to receive(:run)
         http_server
-      }
+      end
       before(:each) do
         allow(subject).to receive(:create_http_server).and_return(http_server)
         subject.register
       end
       it "should show ssl is disabled" do
-        #[2024-10-18T10:09:33,199][INFO ][logstash.inputs.http     ][main][0d48] Starting http input listener {:address=>"0.0.0.0:3333", :ssl_enabled=>true}
+        #[2024-10-18T10:09:33,199][INFO ][logstash.inputs.http     ][main][0d48] Starting http input listener {:address=>"0.0.0.0:3333", :ssl_enabled=>false}
         expect(subject.logger).to receive(:info).with(/^Starting http input listener/, hash_including(:ssl_enabled => false))
         subject.run(nil)
       end
@@ -604,18 +604,18 @@ describe LogStash::Inputs::Http do
       end
 
       context "during run" do
-        let(:http_server) {
+        let(:http_server) do
           http_server = double(:http_server)
           allow(http_server).to receive(:close)
           allow(http_server).to receive(:run)
           http_server
-        }
+        end
         before(:each) do
           allow(subject).to receive(:create_http_server).and_return(http_server)
           subject.register
         end
         it "should show ssl is enabled" do
-          #[2024-10-18T10:09:33,199][INFO ][logstash.inputs.http     ][main][0d48] Starting http input listener {:address=>"0.0.0.0:3333", :ssl_enabled=>false}
+          #[2024-10-18T10:09:33,199][INFO ][logstash.inputs.http     ][main][0d48] Starting http input listener {:address=>"0.0.0.0:3333", :ssl_enabled=>true}
           expect(subject.logger).to receive(:info).with(/^Starting http input listener/, hash_including(:ssl_enabled => true))
           subject.run(nil)
         end
