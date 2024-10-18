@@ -544,6 +544,24 @@ describe LogStash::Inputs::Http do
       expect { subject.register }.to_not raise_exception
     end
 
+    context "during run" do
+      let(:http_server) do
+        http_server = double(:http_server)
+        allow(http_server).to receive(:close)
+        allow(http_server).to receive(:run)
+        http_server
+      end
+      before(:each) do
+        allow(subject).to receive(:create_http_server).and_return(http_server)
+        subject.register
+      end
+      it "should show ssl is disabled" do
+        #[2024-10-18T10:09:33,199][INFO ][logstash.inputs.http     ][main][0d48] Starting http input listener {:address=>"0.0.0.0:3333", :ssl_enabled=>false}
+        expect(subject.logger).to receive(:info).with(/^Starting http input listener/, hash_including(:ssl_enabled => false))
+        subject.run(nil)
+      end
+    end
+
     context "and `ssl_` settings provided" do
       let(:ssc) { SelfSignedCertificate.new }
       let(:config) { { "port" => 0, "ssl_enabled" => false, "ssl_certificate" => ssc.certificate.path, "ssl_client_authentication" => "none", "cipher_suites" => ["TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA"] } }
@@ -583,6 +601,24 @@ describe LogStash::Inputs::Http do
 
       it "should not raise exception" do
         expect { subject.register }.to_not raise_exception
+      end
+
+      context "during run" do
+        let(:http_server) do
+          http_server = double(:http_server)
+          allow(http_server).to receive(:close)
+          allow(http_server).to receive(:run)
+          http_server
+        end
+        before(:each) do
+          allow(subject).to receive(:create_http_server).and_return(http_server)
+          subject.register
+        end
+        it "should show ssl is enabled" do
+          #[2024-10-18T10:09:33,199][INFO ][logstash.inputs.http     ][main][0d48] Starting http input listener {:address=>"0.0.0.0:3333", :ssl_enabled=>true}
+          expect(subject.logger).to receive(:info).with(/^Starting http input listener/, hash_including(:ssl_enabled => true))
+          subject.run(nil)
+        end
       end
 
       context "with ssl_verify_mode = none" do

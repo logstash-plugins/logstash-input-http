@@ -225,7 +225,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   def run(queue)
     @queue = queue
-    @logger.info("Starting http input listener", :address => "#{@host}:#{@port}", :ssl => "#{@ssl}")
+    @logger.info("Starting http input listener", :address => "#{@host}:#{@port}", :ssl_enabled => @ssl_enabled)
     @http_server.run()
   end
 
