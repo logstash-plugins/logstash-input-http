@@ -1,3 +1,16 @@
+## 4.0.0
+- SSL settings that were marked deprecated in version `3.7.0` are now marked obsolete, and will prevent the plugin from starting.
+- These settings are:
+    - `tls_min_version`, which should be replaced by `ssl_supported_protocols`
+    - `tls_max_version`, which should be replaced by `ssl_supported_protocols`
+    - `cipher_suites`, which should bre replaced by `ssl_cipher_suites`
+    - `ssl`, which should bre replaced by `ssl_enabled`
+    - `keystore`, which should bre replaced by `ssl_keystore_path`
+    - `keystore_password`, which should bre replaced by `ssl_keystore_password`
+    - `ssl_verify_mode`, which should bre replaced by `ssl_client_authentication`
+    - `verify_mode`, which should bre replaced by `ssl_client_authentication`
+    - [#182](https://github.com/logstash-plugins/logstash-input-http/pull/182)
+
 ## 3.9.2
  - Upgrade netty to 4.1.115 [#183](https://github.com/logstash-plugins/logstash-input-http/pull/183)
 
