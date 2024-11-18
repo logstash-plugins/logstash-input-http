@@ -1,5 +1,5 @@
 ## 3.9.2
- - Upgrade netty to 4.1.115 TODO
+ - Upgrade netty to 4.1.115 [#183](https://github.com/logstash-plugins/logstash-input-http/pull/183)
 
 ## 3.9.1
  - Correctly log the state of `ssl_enabled` during `run` [#180](https://github.com/logstash-plugins/logstash-input-http/pull/180)
