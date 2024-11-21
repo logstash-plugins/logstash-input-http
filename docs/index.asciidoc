@@ -87,6 +87,10 @@ for the request's content-type is found in the `additional_codecs` setting.
 
 This plugin supports the following configuration options plus the <<plugins-{type}s-{plugin}-common-options>> described later.
 
+NOTE: As of version `4.0.0` of this plugin, a number of previously deprecated settings related to SSL have been removed.
+Please check out <<plugins-{type}s-{plugin}-obsolete-options>> for details.
+
+
 [cols="<,<,<",options="header",]
 |=======================================================================
 |Setting |Input type|Required
@@ -449,6 +453,24 @@ Number of threads to use for both accepting connections and handling requests
 
 Username for basic authorization
 
+[id="plugins-{type}s-{plugin}-obsolete-options"]
+==== HTTP Input Obsolete Configuration Options
+
+WARNING: As of version `4.0.0` of this plugin, some configuration options have been replaced.
+The plugin will fail to start if it contains any of these obsolete options.
+
+[cols="<,<",options="header",]
+|=======================================================================
+|Setting|Replaced by
+| cipher_suites |<<plugins-{type}s-{plugin}-ssl_cipher_suites>>
+| keystore |<<plugins-{type}s-{plugin}-ssl_keystore_path>>
+| keystore_password |<<plugins-{type}s-{plugin}-ssl_keystore_password>>
+| ssl |<<plugins-{type}s-{plugin}-ssl_enabled>>
+| ssl_verify_mode |<<plugins-{type}s-{plugin}-ssl_client_authentication>>
+| tls_max_version |<<plugins-{type}s-{plugin}-ssl_supported_protocols>>
+| tls_min_version |<<plugins-{type}s-{plugin}-ssl_supported_protocols>>
+| verify_mode |<<plugins-{type}s-{plugin}-ssl_client_authentication>>
+|=======================================================================
 
 [id="plugins-{type}s-{plugin}-common-options"]
 include::{include_path}/{type}.asciidoc[]
