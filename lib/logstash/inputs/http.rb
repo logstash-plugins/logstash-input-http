@@ -135,14 +135,14 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   config :response_code, :validate => [200, 201, 202, 204], :default => 200
 
   # Obsolete Settings
-  config :ssl, :validate => :boolean, :default => false, :obsolete => "Set 'ssl_enabled' instead."
-  config :keystore, :validate => :path, :obsolete => "Set 'ssl_keystore_path' instead."
+  config :ssl, :obsolete => "Set 'ssl_enabled' instead."
+  config :keystore, :obsolete => "Set 'ssl_keystore_path' instead."
   config :keystore_password, :validate => :password, :obsolete => "Set 'ssl_keystore_password' instead."
-  config :verify_mode, :validate => ['none', 'peer', 'force_peer'], :default => 'none', :obsolete => "Set 'ssl_client_authentication' instead."
-  config :cipher_suites, :validate => :array, :default => [], :obsolete => "Set 'ssl_cipher_suites' instead."
-  config :tls_min_version, :validate => :number, :default => TLS.min.version, :obsolete => "Set 'ssl_supported_protocols' instead."
-  config :tls_max_version, :validate => :number, :default => TLS.max.version, :obsolete => "Set 'ssl_supported_protocols' instead."
-  config :ssl_verify_mode, :validate => ["none", "peer", "force_peer"], :default => "none", :obsolete => "Set 'ssl_client_authentication' instead."
+  config :verify_mode, :obsolete => "Set 'ssl_client_authentication' instead."
+  config :cipher_suites, :obsolete => "Set 'ssl_cipher_suites' instead."
+  config :tls_min_version, :obsolete => "Set 'ssl_supported_protocols' instead."
+  config :tls_max_version, :obsolete => "Set 'ssl_supported_protocols' instead."
+  config :ssl_verify_mode, :obsolete => "Set 'ssl_client_authentication' instead."
 
   attr_reader :codecs
 
