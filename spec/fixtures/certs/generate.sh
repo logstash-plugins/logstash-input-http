@@ -41,5 +41,8 @@ openssl pkcs12 -export -in client_from_root.crt -inkey client_from_root.key -out
 # use java keytool to convert all pkcs12 keystores to jks-format keystores (pass:12345678)
 keytool -importkeystore -srckeystore client_from_root.p12 -srcstoretype pkcs12 -srcstorepass 12345678 -destkeystore client_from_root.jks -deststorepass 12345678 -alias client_from_root
 
+# create pkcs8 version of root key
+openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in root.key -out root.key.pkcs8
+
 # cleanup csr, we don't need them
 rm -rf *.csr
