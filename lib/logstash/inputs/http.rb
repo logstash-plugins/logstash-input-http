@@ -58,11 +58,6 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # Events are by default sent in plain text. You can
   # enable encryption by setting `ssl` to true and configuring
   # the `ssl_certificate` and `ssl_key` options.
-  config :ssl, :validate => :boolean, :default => false, :deprecated => "Set 'ssl_enabled' instead."
-
-  # Events are by default sent in plain text. You can
-  # enable encryption by setting `ssl` to true and configuring
-  # the `ssl_certificate` and `ssl_key` options.
   config :ssl_enabled, :validate => :boolean, :default => false
 
   # SSL certificate to use.
@@ -108,17 +103,6 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # This option needs to be used with `ssl_certificate_authorities` and a defined list of CAs.
   config :ssl_client_authentication, :validate => %w[none optional required], :default => 'none'
 
-  # By default the server doesn't do any client verification.
-  #
-  # `peer` will make the server ask the client to provide a certificate.
-  # If the client provides a certificate, it will be validated.
-  #
-  # `force_peer` will make the server ask the client to provide a certificate.
-  # If the client doesn't provide a certificate, the connection will be closed.
-  #
-  # This option needs to be used with `ssl_certificate_authorities` and a defined list of CAs.
-  config :ssl_verify_mode, :validate => ["none", "peer", "force_peer"], :default => "none", :deprecated => "Set 'ssl_client_authentication' instead."
-
   # Time in milliseconds for an incomplete ssl handshake to timeout
   config :ssl_handshake_timeout, :validate => :number, :default => 10000
 
@@ -150,25 +134,15 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   config :response_code, :validate => [200, 201, 202, 204], :default => 200
 
-  # Deprecated options
-
-  # The JKS keystore to validate the client's certificates
-  config :keystore, :validate => :path, :deprecated => "Set 'ssl_keystore_path' instead."
-
-  # The JKS keystore password
-  config :keystore_password, :validate => :password, :deprecated => "Set 'ssl_keystore_password' instead."
-
-  config :verify_mode, :validate => ['none', 'peer', 'force_peer'], :default => 'none', :deprecated => "Set 'ssl_client_authentication' instead."
-
-  config :cipher_suites, :validate => :array, :default => [], :deprecated => "Set 'ssl_cipher_suites' instead."
-
-  # The minimum TLS version allowed for the encrypted connections. The value must be one of the following:
-  # 1.0 for TLS 1.0, 1.1 for TLS 1.1, 1.2 for TLS 1.2, 1.3 for TLS 1.3
-  config :tls_min_version, :validate => :number, :default => TLS.min.version, :deprecated => "Set 'ssl_supported_protocols' instead."
-
-  # The maximum TLS version allowed for the encrypted connections. The value must be the one of the following:
-  # 1.0 for TLS 1.0, 1.1 for TLS 1.1, 1.2 for TLS 1.2, 1.3 for TLS 1.3
-  config :tls_max_version, :validate => :number, :default => TLS.max.version, :deprecated => "Set 'ssl_supported_protocols' instead."
+  # Obsolete Settings
+  config :ssl, :obsolete => "Set 'ssl_enabled' instead."
+  config :keystore, :obsolete => "Set 'ssl_keystore_path' instead."
+  config :keystore_password, :validate => :password, :obsolete => "Set 'ssl_keystore_password' instead."
+  config :verify_mode, :obsolete => "Set 'ssl_client_authentication' instead."
+  config :cipher_suites, :obsolete => "Set 'ssl_cipher_suites' instead."
+  config :tls_min_version, :obsolete => "Set 'ssl_supported_protocols' instead."
+  config :tls_max_version, :obsolete => "Set 'ssl_supported_protocols' instead."
+  config :ssl_verify_mode, :obsolete => "Set 'ssl_client_authentication' instead."
 
   attr_reader :codecs
 
@@ -199,8 +173,6 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   public
   def register
-
-    setup_ssl_params!
 
     validate_ssl_settings!
 
@@ -342,51 +314,12 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   end
 
   def setup_ssl_params!
-    @ssl_enabled = normalize_config(:ssl_enabled) do |normalizer|
-      normalizer.with_deprecated_alias(:ssl)
-    end
-
-    @ssl_cipher_suites = normalize_config(:ssl_cipher_suites) do |normalizer|
-      normalizer.with_deprecated_alias(:cipher_suites)
-    end
-
-    @ssl_supported_protocols = normalize_config(:ssl_supported_protocols) do |normalizer|
-      normalizer.with_deprecated_mapping(:tls_min_version, :tls_max_version) do |tls_min_version, tls_max_version|
-        TLS.get_supported(tls_min_version..tls_max_version).map(&:name)
-      end
-    end
-
-    @ssl_client_authentication = normalize_config(:ssl_client_authentication) do |normalizer|
-      normalizer.with_deprecated_mapping(:verify_mode, :ssl_verify_mode) do |verify_mode, ssl_verify_mode|
-        normalize_ssl_client_authentication_value!(verify_mode, ssl_verify_mode)
-      end
-    end
-
-    @ssl_keystore_path = normalize_config(:ssl_keystore_path) do |normalizer|
-      normalizer.with_deprecated_alias(:keystore)
-    end
-
-    @ssl_keystore_password = normalize_config(:ssl_keystore_password) do |normalizer|
-      normalizer.with_deprecated_alias(:keystore_password)
-    end
-
     params['ssl_enabled'] = @ssl_enabled unless @ssl_enabled.nil?
     params['ssl_cipher_suites'] = @ssl_cipher_suites unless @ssl_cipher_suites.nil?
     params['ssl_supported_protocols'] = @ssl_supported_protocols unless @ssl_supported_protocols.nil?
     params['ssl_client_authentication'] = @ssl_client_authentication unless @ssl_client_authentication.nil?
     params['ssl_keystore_path'] = @ssl_keystore_path unless @ssl_keystore_path.nil?
     params['ssl_keystore_password'] = @ssl_keystore_password unless @ssl_keystore_password.nil?
-  end
-
-  def normalize_ssl_client_authentication_value!(verify_mode, ssl_verify_mode)
-    verify_mode_explicitly_set = original_params.key?("verify_mode")
-
-    if verify_mode_explicitly_set && original_params.key?("ssl_verify_mode")
-      raise LogStash::ConfigurationError, "Both (deprecated) `ssl_verify_mode` and `verify_mode` were set. Use only `ssl_verify_mode`"
-    end
-
-    deprecated_value = (verify_mode_explicitly_set ? verify_mode : ssl_verify_mode).downcase
-    SSL_VERIFY_MODE_TO_CLIENT_AUTHENTICATION_MAP[deprecated_value]
   end
 
   def create_http_server(message_handler)
@@ -467,13 +400,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   end
 
   def provided_ssl_client_authentication_config(values = [@ssl_client_authentication])
-    if original_params.include?('ssl_verify_mode')
-      ['ssl_verify_mode', *values.map { |v| SSL_VERIFY_MODE_TO_CLIENT_AUTHENTICATION_MAP.key(v) }]
-    elsif original_params.include?('verify_mode')
-      ['verify_mode', *values.map { |v| SSL_VERIFY_MODE_TO_CLIENT_AUTHENTICATION_MAP.key(v) }]
-    else
       ['ssl_client_authentication', *values]
-    end
   end
 
   private
