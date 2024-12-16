@@ -1,3 +1,6 @@
+## 3.10.0
+ - add improved proactive rate-limiting, rejecting new requests when queue has been actively blocking for more than 10 seconds [#179](https://github.com/logstash-plugins/logstash-input-http/pull/179)
+
 ## 3.9.2
  - Upgrade netty to 4.1.115 [#183](https://github.com/logstash-plugins/logstash-input-http/pull/183)
 
