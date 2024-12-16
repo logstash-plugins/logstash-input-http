@@ -1,6 +1,6 @@
 ## 4.0.0
-- SSL settings that were marked deprecated in version `3.7.0` are now marked obsolete, and will prevent the plugin from starting.
-- These settings are:
+  - SSL settings that were marked deprecated in version `3.7.0` are now marked obsolete, and will prevent the plugin from starting.
+  - These settings are:
     - `tls_min_version`, which should be replaced by `ssl_supported_protocols`
     - `tls_max_version`, which should be replaced by `ssl_supported_protocols`
     - `cipher_suites`, which should bre replaced by `ssl_cipher_suites`
