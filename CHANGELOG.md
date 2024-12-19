@@ -1,5 +1,5 @@
 ## 4.1.0
-- add improved proactive rate-limiting, rejecting new requests when queue has been actively blocking for more than 10 seconds
+- add improved proactive rate-limiting, rejecting new requests when queue has been actively blocking for more than 10 seconds [#186](https://github.com/logstash-plugins/logstash-input-http/pull/186)
   - This is a forward-port of functionality also introduced to the 3.x series in 3.10.0 
 
 ## 4.0.0
