@@ -8,8 +8,12 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.ssl.SslHandler;
+import org.logstash.plugins.inputs.http.util.ExecutionObserver;
+import org.logstash.plugins.inputs.http.util.ExecutionObservingMessageHandler;
+import org.logstash.plugins.inputs.http.util.RejectWhenBlockedInboundHandler;
 import org.logstash.plugins.inputs.http.util.SslHandlerProvider;
 
+import java.time.Duration;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -22,9 +26,11 @@ public class HttpInitializer extends ChannelInitializer<SocketChannel> {
     private final HttpResponseStatus responseStatus;
     private final ThreadPoolExecutor executorGroup;
 
+    private final ExecutionObserver executionObserver = new ExecutionObserver();
+
     public HttpInitializer(IMessageHandler messageHandler, ThreadPoolExecutor executorGroup,
                            int maxContentLength, HttpResponseStatus responseStatus) {
-        this.messageHandler = messageHandler;
+        this.messageHandler = new ExecutionObservingMessageHandler(executionObserver, messageHandler);
         this.executorGroup = executorGroup;
         this.maxContentLength = maxContentLength;
         this.responseStatus = responseStatus;
@@ -37,7 +43,9 @@ public class HttpInitializer extends ChannelInitializer<SocketChannel> {
             SslHandler sslHandler = sslHandlerProvider.getSslHandler(socketChannel.alloc());
             pipeline.addLast(sslHandler);
         }
+
         pipeline.addLast(new HttpServerCodec());
+        pipeline.addLast(new RejectWhenBlockedInboundHandler(executionObserver, Duration.ofSeconds(10)));
         pipeline.addLast(new HttpContentDecompressor());
         pipeline.addLast(new HttpObjectAggregator(maxContentLength));
         pipeline.addLast(new HttpServerHandler(messageHandler.copy(), executorGroup, responseStatus));
