@@ -1,3 +1,7 @@
+## 4.1.0
+- add improved proactive rate-limiting, rejecting new requests when queue has been actively blocking for more than 10 seconds
+  - This is a forward-port of functionality also introduced to the 3.x series in 3.10.0 
+
 ## 4.0.0
   - SSL settings that were marked deprecated in version `3.7.0` are now marked obsolete, and will prevent the plugin from starting.
   - These settings are:
@@ -10,6 +14,9 @@
     - `ssl_verify_mode`, which should bre replaced by `ssl_client_authentication`
     - `verify_mode`, which should bre replaced by `ssl_client_authentication`
     - [#182](https://github.com/logstash-plugins/logstash-input-http/pull/182)
+
+## 3.10.0
+ - add improved proactive rate-limiting, rejecting new requests when queue has been actively blocking for more than 10 seconds [#179](https://github.com/logstash-plugins/logstash-input-http/pull/179)
 
 ## 3.9.2
  - Upgrade netty to 4.1.115 [#183](https://github.com/logstash-plugins/logstash-input-http/pull/183)
