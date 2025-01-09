@@ -95,7 +95,7 @@ Please check out <<plugins-{type}s-{plugin}-obsolete-options>> for details.
 |=======================================================================
 |Setting |Input type|Required
 | <<plugins-{type}s-{plugin}-additional_codecs>> |<<hash,hash>>|No
-| <<plugins-{type}s-{plugin}-ecs_compatibility>> | <<string,string>>|No
+| <<plugins-{type}s-{plugin}-ecs_compatability>> | <<string,string>>|No
 | <<plugins-{type}s-{plugin}-host>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-password>> |<<password,password>>|No
 | <<plugins-{type}s-{plugin}-port>> |<<number,number>>|No
