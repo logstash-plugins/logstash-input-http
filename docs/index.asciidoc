@@ -97,7 +97,7 @@ Please check out <<plugins-{type}s-{plugin}-obsolete-options>> for details.
 | <<plugins-{type}s-{plugin}-additional_codecs>> |<<hash,hash>>|No
 | <<plugins-{type}s-{plugin}-ecs_compatibility>> | <<string,string>>|No
 | <<plugins-{type}s-{plugin}-host>> |<<string,string>>|No
-| <<plugins-{type}s-{plugin}-password>> |<<password,password>>|No
+| <<plugins-{type}s-{plugin}-passwrd>> |<<password,password>>|No
 | <<plugins-{type}s-{plugin}-port>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-max_pending_requests>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-response_headers>> |<<hash,hash>>|No
