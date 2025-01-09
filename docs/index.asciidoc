@@ -102,7 +102,7 @@ Please check out <<plugins-{type}s-{plugin}-obsolete-options>> for details.
 | <<plugins-{type}s-{plugin}-max_pending_requests>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-response_headers>> |<<hash,hash>>|No
 | <<plugins-{type}s-{plugin}-response_code>> |<<number,number>>, one of `[200, 201, 202, 204]`|No
-| <<plugins-{type}s-{plugin}-ssl_certificate>> |a valid filesystem path|No
+| <<plugins-{type}s-{plugin}-ssl_cetificate>> |a valid filesystem path|No
 | <<plugins-{type}s-{plugin}-ssl_certificate_authorities>> |<<array,array>>|No
 | <<plugins-{type}s-{plugin}-ssl_cipher_suites>> |<<array,array>>|No
 | <<plugins-{type}s-{plugin}-ssl_client_authentication>> |<<string,string>>, one of `["none", "optional", "required"]`|No
