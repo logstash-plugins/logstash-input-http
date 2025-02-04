@@ -31,9 +31,9 @@ public class NettyHttpServer implements Runnable, Closeable {
     private final ThreadPoolExecutor executorGroup;
     private final HttpResponseStatus responseStatus;
 
-    public NettyHttpServer(String host, int port, IMessageHandler messageHandler,
-                           SslHandlerProvider sslHandlerProvider, int threads,
-                           int maxPendingRequests, int maxContentLength, int responseCode)
+    public NettyHttpServer(final String id, final String host, final int port, final IMessageHandler messageHandler,
+                           final SslHandlerProvider sslHandlerProvider, final int threads,
+                           final int maxPendingRequests, final int maxContentLength, final int responseCode)
     {
         this.host = host;
         this.port = port;
@@ -42,12 +42,12 @@ public class NettyHttpServer implements Runnable, Closeable {
         // boss group is responsible for accepting incoming connections and sending to worker loop
         // process group is channel handler, see the https://github.com/netty/netty/discussions/13305
         // see the https://github.com/netty/netty/discussions/11808#discussioncomment-1610918 for why separation is good
-        bossGroup = new NioEventLoopGroup(1, daemonThreadFactory("http-input-connector"));
-        processorGroup = new NioEventLoopGroup(threads, daemonThreadFactory("http-input-processor"));
+        bossGroup = new NioEventLoopGroup(1, daemonThreadFactory(id + "-bossGroup"));
+        processorGroup = new NioEventLoopGroup(threads, daemonThreadFactory(id + "-processorGroup"));
 
         // event handler group
         executorGroup = new ThreadPoolExecutor(threads, threads, 0, TimeUnit.MILLISECONDS,
-                new ArrayBlockingQueue<>(maxPendingRequests), daemonThreadFactory("http-input-handler-executor"),
+                new ArrayBlockingQueue<>(maxPendingRequests), daemonThreadFactory(id + "-executorGroup"),
                 new CustomRejectedExecutionHandler());
 
         final HttpInitializer httpInitializer = new HttpInitializer(messageHandler, executorGroup,
