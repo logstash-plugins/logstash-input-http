@@ -1,3 +1,6 @@
+## 3.10.1
+  - Properly naming netty threads [#191](https://github.com/logstash-plugins/logstash-input-http/pull/191)
+
 ## 3.10.0
  - add improved proactive rate-limiting, rejecting new requests when queue has been actively blocking for more than 10 seconds [#179](https://github.com/logstash-plugins/logstash-input-http/pull/179)
 
