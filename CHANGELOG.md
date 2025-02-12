@@ -1,3 +1,6 @@
+## 3.10.2
+  - Upgrade netty to 4.1.118 [#194](https://github.com/logstash-plugins/logstash-input-http/pull/194)
+
 ## 3.10.1
   - Properly naming netty threads [#191](https://github.com/logstash-plugins/logstash-input-http/pull/191)
 
