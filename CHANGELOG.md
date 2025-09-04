@@ -1,3 +1,6 @@
+## 3.10.3
+  - Upgrade netty to 4.1.126 [#199](https://github.com/logstash-plugins/logstash-input-http/pull/199)
+
 ## 3.10.2
   - Upgrade netty to 4.1.118 [#194](https://github.com/logstash-plugins/logstash-input-http/pull/194)
 
