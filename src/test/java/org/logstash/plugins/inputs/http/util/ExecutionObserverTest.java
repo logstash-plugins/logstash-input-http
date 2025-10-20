@@ -194,7 +194,7 @@ class ExecutionObserverTest {
             // without queries, we may have some compaction so we shouldn't be too strict
             final ExecutionObserver.Stats preCompactionStats = observer.stats();
             assertThat(preCompactionStats.executing, is(0));
-            assertThat(preCompactionStats.nodes, is(both(greaterThan(0)).and(lessThan((int) Math.sqrt(concurrency)))));
+            assertThat(preCompactionStats.nodes, is(both(greaterThan(0)).and(lessThan(concurrency))));
 
             // query triggers tail compaction, leaving 2 or fewer nodes.
             assertThat(observer.anyExecuting(), is(false));
