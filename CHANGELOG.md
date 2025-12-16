@@ -1,4 +1,7 @@
 ## 4.1.3
+  - Upgrade netty to 4.1.129 [#TBD](https://github.com/logstash-plugins/logstash-input-http/pull/TBD)
+
+## 4.1.3
   - Upgrade netty to 4.1.126 [#198](https://github.com/logstash-plugins/logstash-input-http/pull/198)
 
 ## 4.1.2
