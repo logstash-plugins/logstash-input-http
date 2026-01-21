@@ -69,10 +69,27 @@ return a 429 if the queue is busy, and will not time out in the event of a busy 
 
 ==== Security
 This plugin supports standard HTTP basic authentication headers to identify the requester.
-You can pass in a username, password combination while sending data to this input
+You can pass in a username, password combination while sending data to this input.
+Basic authentication credentials are passed by the client as cleartext unless SSL is enabled.
 
 You can also setup SSL and send data securely over https, with multiple options such as
 validating the client's certificate.
+
+===== SSL Identity Configuration
+
+When communicating over SSL, you can also configure this plugin to present a certificate-based proof-of-identity to connecting clients using one of:
+
+* A PKCS8 Certificate/Key pair and optional certificate chain (see <<plugins-{type}s-{plugin}-ssl_certificate>>)
+* A JKS- or PKCS12-formatted Keystore (see <<plugins-{type}s-{plugin}-ssl_keystore_path>>)
+
+===== SSL Trust Configuration
+
+When communicating over SSL, this plugin can be configured to ask clients to present their own identities (see <<plugins-{type}s-{plugin}-ssl_client_authentication>>), and will fully-validate the presented proof-of-identity presented by the connecting client using the system trust store.
+
+You can provide an _alternate_ source of trust with one of:
+
+* A PEM-formatted list of trusted certificate authorities (see <<plugins-{type}s-{plugin}-ssl_certificate_authorities>>)
+* A JKS- or PKCS12-formatted Keystore containing trusted certificates (see <<plugins-{type}s-{plugin}-ssl_truststore_path>>)
 
 [id="plugins-{type}s-{plugin}-codec-settings"]
 ==== Codec settings
@@ -293,7 +310,10 @@ specify target field for the client host of the http request
   * Value type is <<path,path>>
   * There is no default value for this setting.
 
-SSL certificate to use.
+Path to a PEM-encoded certificate or certificate chain with which to identify this plugin when establishing SSL.
+If the file contains more than one certificate, they will be presented to connecting clients in the same order as they exist in the file.
+
+NOTE: You cannot use this setting and <<plugins-{type}s-{plugin}-ssl_keystore_path>> at the same time.
 
 [id="plugins-{type}s-{plugin}-ssl_certificate_authorities"]
 ===== `ssl_certificate_authorities` 
@@ -354,8 +374,10 @@ Time in milliseconds for an incomplete ssl handshake to timeout
   * There is no default value for this setting.
 
 SSL key to use.
+Connecting clients expect this key to match the one used when generating the provided `ssl_certificate`.
+
 NOTE: This key need to be in the PKCS8 format, you can convert it with https://www.openssl.org/docs/man1.1.1/man1/openssl-pkcs8.html[OpenSSL]
-for more information.
+      for more information.
 
 [id="plugins-{type}s-{plugin}-ssl_key_passphrase"]
 ===== `ssl_key_passphrase` 
@@ -363,7 +385,7 @@ for more information.
   * Value type is <<password,password>>
   * There is no default value for this setting.
 
-SSL key passphrase to use.
+SSL key passphrase with which to decrypt the provided `ssl_key`.
 
 [id="plugins-{type}s-{plugin}-ssl_keystore_path"]
 ===== `ssl_keystore_path`
@@ -371,7 +393,7 @@ SSL key passphrase to use.
  * Value type is <<path,path>>
  * There is no default value for this setting.
 
-The path for the keystore file that contains a private key and certificate.
+The path for the keystore file that contains a private key and certificate, along with an optional certificate chain.
 It must be either a Java keystore (jks) or a PKCS#12 file.
 
 NOTE: You cannot use this setting and <<plugins-{type}s-{plugin}-ssl_certificate>> at the same time.
