@@ -26,20 +26,17 @@ repositories {
 }
 
 dependencies {
-    testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
+    // netty-codec-http pulls netty-handler, which pulls netty-buffer, netty-codec, netty-common,
+    // netty-transport, netty-transport-native-unix-common, and netty-resolver as transitive dependencies
+    implementation "io.netty:netty-codec-http:${nettyVersion}"
+
+    compileOnly "org.apache.logging.log4j:log4j-api:${log4jVersion}" // provided by Logstash
+
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
     testImplementation 'org.hamcrest:hamcrest-library:2.2'
     testImplementation "org.apache.logging.log4j:log4j-core:${log4jVersion}"
     testImplementation 'org.mockito:mockito-core:5.12.0'
-
-    implementation "io.netty:netty-buffer:${nettyVersion}"
-    implementation "io.netty:netty-codec:${nettyVersion}"
-    implementation "io.netty:netty-codec-http:${nettyVersion}"
-    implementation "io.netty:netty-common:${nettyVersion}"
-    implementation "io.netty:netty-transport:${nettyVersion}"
-    implementation "io.netty:netty-handler:${nettyVersion}"
-    implementation "io.netty:netty-transport-native-unix-common:${nettyVersion}" // this is needed from Netty 4.1.78.Final on
-    compileOnly "org.apache.logging.log4j:log4j-api:${log4jVersion}" // provided by Logstash
 }
 
 test {
@@ -80,20 +77,23 @@ task generateGemJarRequiresFile {
 task vendor {
     doLast {
         String vendorPathPrefix = "vendor/jar-dependencies"
+        String projectGroupPath = project.group.replaceAll('\\.', '/')
         configurations.runtimeClasspath.incoming.artifacts.artifacts.each { artifact ->
             def id = artifact.id.componentIdentifier
             if (id instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier) {
-                String group = id.group
                 String name = id.module
                 String version = id.version
-                String groupPath = group.replaceAll('\\.', '/')
-                File newJarFile = file("${vendorPathPrefix}/${groupPath}/${name}/${version}/${name}-${version}.jar")
+                File newJarFile = file("${vendorPathPrefix}/${projectGroupPath}/${name}/${version}/${name}-${version}.jar")
                 if (!newJarFile.parentFile.exists()) {
                     newJarFile.parentFile.mkdirs()
                 }
                 Files.copy(artifact.file.toPath(), newJarFile.toPath(), REPLACE_EXISTING)
             }
         }
+
+        File projectJarFile = file("${vendorPathPrefix}/${projectGroupPath}/${project.name}/${project.version}/${project.name}-${project.version}.jar")
+        projectJarFile.mkdirs()
+        Files.copy(file("$buildDir/libs/${project.name}-${project.version}.jar").toPath(), projectJarFile.toPath(), REPLACE_EXISTING)
     }
 }
 
