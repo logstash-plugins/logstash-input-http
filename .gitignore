@@ -9,3 +9,4 @@ build/*
 .ci/*
 .gradle/*
 logstash-input-http.iml
+lib/logstash-input-http_jars.rb
