@@ -8,5 +8,5 @@ vendor
 build/*
 .ci/*
 .gradle/*
-lib/logstash-input-http_jars.rb
 logstash-input-http.iml
+lib/logstash-input-http_jars.rb
