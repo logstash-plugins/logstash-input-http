@@ -1,3 +1,6 @@
+## 4.1.6
+  - Upgrade netty to 4.1.131 [#207](https://github.com/logstash-plugins/logstash-input-http/pull/207)
+
 ## 4.1.5
   - Re-packaging the plugin [#206](https://github.com/logstash-plugins/logstash-input-http/pull/206)
 
