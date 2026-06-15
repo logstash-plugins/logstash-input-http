@@ -1,3 +1,6 @@
+## 4.1.10
+  - Update Netty dependency to 4.1.135.Final [#219](https://github.com/logstash-plugins/logstash-input-http/pull/219)
+
 ## 4.1.9
   - Update Netty dependency to 4.1.134.Final [#217](https://github.com/logstash-plugins/logstash-input-http/pull/217)
 
