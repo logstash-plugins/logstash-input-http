@@ -1,6 +1,15 @@
-## 4.1.8
+## 4.1.11
   - When configured to use a port that is already in use, the failure is now propagated to the pipeline [#221](https://github.com/logstash-plugins/logstash-input-http/pull/221)
     This fixes an issue where a misconfigured input could retry indefinitely while Logstash's health report continued to report the pipeline as healthy.
+
+## 4.1.10
+  - Update Netty dependency to 4.1.135.Final [#219](https://github.com/logstash-plugins/logstash-input-http/pull/219)
+
+## 4.1.9
+  - Update Netty dependency to 4.1.134.Final [#217](https://github.com/logstash-plugins/logstash-input-http/pull/217)
+
+## 4.1.8
+ - Update Netty dependency to 4.1.133.Final [#216](https://github.com/logstash-plugins/logstash-input-http/pull/216)
 
 ## 4.1.7
   - Update Netty dependency to 4.1.132.Final [#214](https://github.com/logstash-plugins/logstash-input-http/pull/214)
