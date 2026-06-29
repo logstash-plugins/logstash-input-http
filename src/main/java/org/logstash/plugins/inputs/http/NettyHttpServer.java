@@ -1,6 +1,7 @@
 package org.logstash.plugins.inputs.http;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -31,6 +32,8 @@ public class NettyHttpServer implements Runnable, Closeable {
     private final ThreadPoolExecutor executorGroup;
     private final HttpResponseStatus responseStatus;
 
+    private volatile Channel serverChannel;
+
     public NettyHttpServer(final String id, final String host, final int port, final IMessageHandler messageHandler,
                            final SslHandlerProvider sslHandlerProvider, final int threads,
                            final int maxPendingRequests, final int maxContentLength, final int responseCode)
@@ -57,20 +60,33 @@ public class NettyHttpServer implements Runnable, Closeable {
             httpInitializer.enableSSL(sslHandlerProvider);
         }
 
-        serverBootstrap = new ServerBootstrap()
+        this.serverBootstrap = new ServerBootstrap()
                 .group(bossGroup, processorGroup)
                 .channel(NioServerSocketChannel.class)
+                .option(ChannelOption.AUTO_READ, false) // delay accepting connections until we have a queue
                 .option(ChannelOption.SO_BACKLOG, connectionBacklog)
                 .childOption(ChannelOption.SO_KEEPALIVE, true)
                 .childHandler(httpInitializer);
     }
 
+    public synchronized void bind() {
+        if (serverChannel != null && serverChannel.isOpen()) {
+            throw new IllegalStateException("Server is already bound");
+        }
+        serverChannel = serverBootstrap.bind(host, port).syncUninterruptibly().channel();
+    }
+
     @Override
     public void run() {
+        synchronized(this) {
+            if (serverChannel == null) {
+                bind();
+            }
+        }
         try {
             executorGroup.prestartAllCoreThreads();
-            final ChannelFuture channel = serverBootstrap.bind(host, port);
-            channel.sync().channel().closeFuture().sync();
+            serverChannel.config().setAutoRead(true); // begin accepting connections
+            serverChannel.closeFuture().sync();
         } catch (final InterruptedException ex) {
             throw new IllegalStateException(ex);
         }
@@ -80,6 +96,11 @@ public class NettyHttpServer implements Runnable, Closeable {
     public void close() {
         try {
             // stop accepting new connections first
+            synchronized (this) {
+                if (serverChannel != null && serverChannel.isOpen()) {
+                    serverChannel.close().sync();
+                }
+            }
             bossGroup.shutdownGracefully().sync();
             // stop the worker group
             processorGroup.shutdownGracefully().sync();
@@ -97,5 +118,4 @@ public class NettyHttpServer implements Runnable, Closeable {
             throw new IllegalStateException(ex);
         }
     }
-
 }

@@ -20,15 +20,29 @@ describe LogStash::Inputs::Http do
   let(:client) { Manticore::Client.new(client_options) }
   let(:client_options) { { } }
   let(:logstash_queue) { Queue.new }
-  let(:port) { rand(5000) + 1025 }
+  let(:port) { find_available_port }
   let(:url) { "http://127.0.0.1:#{port}" }
 
   let(:config) { { "port" => port } }
 
-  subject { described_class.new(config) }
+  subject(:plugin) { described_class.new(config) }
 
   it_behaves_like "an interruptible input plugin" do
     let(:config) { { "port" => port } }
+  end
+
+  context "when port is unavailable" do
+    around(:each) do |example|
+      with_bound_port(port: port, &example)
+    end
+
+    after(:each) { plugin.stop }
+
+    it "raises a helpful exception" do
+      expect { plugin.register }
+        .to raise_error(LogStash::ConfigurationError)
+               .with_message(a_string_including("could not bind to #{plugin.host}:#{plugin.port}"))
+    end
   end
 
   after :each do
@@ -594,6 +608,7 @@ describe LogStash::Inputs::Http do
     context "during run" do
       let(:http_server) do
         http_server = double(:http_server)
+        allow(http_server).to receive(:bind)
         allow(http_server).to receive(:close)
         allow(http_server).to receive(:run)
         http_server
@@ -643,6 +658,7 @@ describe LogStash::Inputs::Http do
       context "during run" do
         let(:http_server) do
           http_server = double(:http_server)
+          allow(http_server).to receive(:bind)
           allow(http_server).to receive(:close)
           allow(http_server).to receive(:run)
           http_server
