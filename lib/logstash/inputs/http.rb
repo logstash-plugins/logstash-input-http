@@ -194,6 +194,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       logger.debug("Binding http input to port", :address => "#{@host}:#{@port}", :ssl_enabled => @ssl_enabled)
       @http_server.bind
     rescue java.net.BindException => bind_exception
+      @http_server.close rescue nil
       fail LogStash::ConfigurationError, "could not bind to #{@host}:#{@port}; #{bind_exception.message}"
     end
 
