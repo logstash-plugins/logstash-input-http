@@ -190,6 +190,13 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     require "logstash/inputs/http/message_handler"
     message_handler = MessageHandler.new(self, @codec, @codecs, @auth_token)
     @http_server = create_http_server(message_handler)
+    begin
+      logger.debug("Binding http input to port", :address => "#{@host}:#{@port}", :ssl_enabled => @ssl_enabled)
+      @http_server.bind
+    rescue java.net.BindException => bind_exception
+      @http_server.close rescue nil
+      fail LogStash::ConfigurationError, "could not bind to #{@host}:#{@port}; #{bind_exception.message}"
+    end
 
     @remote_host_target_field ||= ecs_select[disabled: "host", v1: "[host][ip]"]
     @request_headers_target_field ||= ecs_select[disabled: "headers", v1: "[@metadata][input][http][request][headers]"]
