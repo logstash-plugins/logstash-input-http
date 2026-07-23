@@ -1,6 +1,6 @@
 # Logstash Plugin
 
-[![Travis Build Status](https://travis-ci.com/logstash-plugins/logstash-input-http.svg)](https://travis-ci.com/logstash-plugins/logstash-input-http)
+[![Unit Tests](https://github.com/logstash-plugins/logstash-input-http/actions/workflows/unit-tests.yml/badge.svg?branch=3.x)](https://github.com/logstash-plugins/logstash-input-http/actions/workflows/unit-tests.yml)
 
 This is a plugin for [Logstash](https://github.com/elastic/logstash).
 
