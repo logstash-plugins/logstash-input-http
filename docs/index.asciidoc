@@ -27,6 +27,14 @@ Logstash will convert it into an event for subsequent processing. Users
 can pass plain text, JSON, or any formatted data and use a corresponding codec with this
 input. For Content-Type `application/json` the `json` codec is used, but for all other
 data formats, `plain` codec is used.
+If the `Content-type` header also defines a charset like in:
+
+[source,text]
+-----
+curl -X POST -H 'Content-Type: application/json; charset=ISO-8859-1'
+-----
+
+then that charset is used to decode the request body. Else UTF-8 is applied.
 
 This input can also be used to receive webhook requests to integrate with other services
 and applications. By taking advantage of the vast plugin ecosystem available in Logstash
