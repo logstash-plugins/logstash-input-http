@@ -223,6 +223,17 @@ describe LogStash::Inputs::Http do
           expect(event.get("message_body")).to eq("Hello")
         end
       end
+
+      context "when receiving an application/json request with charset ISO-8859-1 in content-type" do
+        it "should decode the body using the charset declared in the content-type header" do
+          body = '{"msg":"A Coruña"}'.encode("ISO-8859-1")
+          client.post("http://127.0.0.1:#{port}/meh.json",
+                      :headers => { "content-type" => "application/json; charset=ISO-8859-1" },
+                      :body => body).call
+          event = logstash_queue.pop
+          expect(event.get("msg")).to eq("A Coruña")
+        end
+      end
     end
 
     context "with json codec" do

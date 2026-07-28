@@ -3,19 +3,13 @@ package org.logstash.plugins.inputs.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.DefaultHttpHeaders;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.HttpHeaderNames;
-import io.netty.handler.codec.http.HttpHeaders;
-import io.netty.handler.codec.http.HttpResponse;
-import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.logstash.plugins.inputs.http.util.RejectableRunnable;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -73,7 +67,9 @@ public class MessageProcessor implements RejectableRunnable {
 
     private FullHttpResponse processMessage() {
         final Map<String, String> formattedHeaders = formatHeaders(req.headers());
-        final String body = req.content().toString(UTF8_CHARSET);
+        Charset charset = HttpUtil.getCharset(req, UTF8_CHARSET);
+//        final String body = req.content().toString(UTF8_CHARSET);
+        final String body = req.content().toString(charset);
         if (messageHandler.onNewMessage(remoteAddress, formattedHeaders, body)) {
             return generateResponse(messageHandler.responseHeaders());
         } else {
