@@ -11,11 +11,13 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.logstash.plugins.inputs.http.util.RejectableRunnable;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,7 +28,6 @@ public class MessageProcessor implements RejectableRunnable {
     private final IMessageHandler messageHandler;
     private final HttpResponseStatus responseStatus;
 
-    private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
     private final static Logger LOGGER = LogManager.getLogger(MessageHandler.class);
 
     MessageProcessor(ChannelHandlerContext ctx, FullHttpRequest req, String remoteAddress,
@@ -73,7 +74,8 @@ public class MessageProcessor implements RejectableRunnable {
 
     private FullHttpResponse processMessage() {
         final Map<String, String> formattedHeaders = formatHeaders(req.headers());
-        final String body = req.content().toString(UTF8_CHARSET);
+        Charset charset = HttpUtil.getCharset(req, StandardCharsets.UTF_8);
+        final String body = req.content().toString(charset);
         if (messageHandler.onNewMessage(remoteAddress, formattedHeaders, body)) {
             return generateResponse(messageHandler.responseHeaders());
         } else {
@@ -106,7 +108,7 @@ public class MessageProcessor implements RejectableRunnable {
         response.headers().set(headers);
 
         if (responseStatus != HttpResponseStatus.NO_CONTENT) {
-            final ByteBuf payload = Unpooled.wrappedBuffer("ok".getBytes(UTF8_CHARSET));
+            final ByteBuf payload = Unpooled.wrappedBuffer("ok".getBytes(StandardCharsets.UTF_8));
             response.headers().set(HttpHeaderNames.CONTENT_LENGTH, payload.readableBytes());
             response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
             response.content().writeBytes(payload);
