@@ -223,15 +223,27 @@ describe LogStash::Inputs::Http do
           expect(event.get("message_body")).to eq("Hello")
         end
       end
+      
+      context "when receiving a request with content-type specifying charset" do
+        let(:headers) { { "content-type" => "application/json; charset=#{charset}"} }
+        let(:body) { '{"msg":"A Coruña"}'.encode(charset) }
 
-      context "when receiving an application/json request with charset ISO-8859-1 in content-type" do
-        it "should decode the body using the charset declared in the content-type header" do
-          body = '{"msg":"A Coruña"}'.encode("ISO-8859-1")
-          client.post("http://127.0.0.1:#{port}/meh.json",
-                      :headers => { "content-type" => "application/json; charset=ISO-8859-1" },
-                      :body => body).call
-          event = logstash_queue.pop
-          expect(event.get("msg")).to eq("A Coruña")
+        context "ISO-8859-1" do
+          let(:charset) { "ISO-8859-1" }
+          it "should decode the message accordingly" do
+            client.post("http://127.0.0.1:#{port}/meh.json", :headers => headers, :body => body).call
+            event = logstash_queue.pop
+            expect(event.get("msg")).to eq("A Coruña")
+          end
+        end
+
+        context "UTF-8" do
+          let(:charset) { "UTF-8".downcase }
+          it "should decode the message accordingly" do
+            client.post("http://127.0.0.1:#{port}/meh.json", :headers => headers, :body => body).call
+            event = logstash_queue.pop
+            expect(event.get("msg")).to eq("A Coruña")
+          end
         end
       end
     end
