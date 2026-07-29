@@ -11,6 +11,17 @@ require 'inputs/helpers'
 
 java_import "io.netty.handler.ssl.util.SelfSignedCertificate"
 
+shared_examples "decodes message with charset" do |charset|
+  let(:headers) { { "content-type" => "application/json; charset=#{charset}" } }
+  let(:body) { '{"msg":"A Coruña"}'.encode(charset) }
+
+  it "should decode the message accordingly" do
+    client.post("http://127.0.0.1:#{port}/meh.json", :headers => headers, :body => body).call
+    event = logstash_queue.pop
+    expect(event.get("msg")).to eq("A Coruña")
+  end
+end
+
 describe LogStash::Inputs::Http do
 
   before do
@@ -221,6 +232,16 @@ describe LogStash::Inputs::Http do
                       :body => { "message_body" => "Hello" }.to_json).call
           event = logstash_queue.pop
           expect(event.get("message_body")).to eq("Hello")
+        end
+      end
+      
+      context "when receiving a request with content-type specifying charset" do
+        context "ISO-8859-1" do
+          it_behaves_like "decodes message with charset", "ISO-8859-1"
+        end
+
+        context "UTF-8" do
+          it_behaves_like "decodes message with charset", "utf-8"
         end
       end
     end
