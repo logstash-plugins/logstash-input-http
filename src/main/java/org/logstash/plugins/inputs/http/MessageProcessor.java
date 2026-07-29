@@ -75,7 +75,6 @@ public class MessageProcessor implements RejectableRunnable {
     private FullHttpResponse processMessage() {
         final Map<String, String> formattedHeaders = formatHeaders(req.headers());
         Charset charset = HttpUtil.getCharset(req, UTF8_CHARSET);
-//        final String body = req.content().toString(UTF8_CHARSET);
         final String body = req.content().toString(charset);
         if (messageHandler.onNewMessage(remoteAddress, formattedHeaders, body)) {
             return generateResponse(messageHandler.responseHeaders());
