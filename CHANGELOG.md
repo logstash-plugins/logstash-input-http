@@ -1,3 +1,6 @@
+## 3.10.11
+  - Fix to use the `Content-type` declared charset to decode the request body [#232](https://github.com/logstash-plugins/logstash-input-http/pull/232)
+
 ## 3.10.10
   - Update Netty dependency to 4.1.136.Final [#229](https://github.com/logstash-plugins/logstash-input-http/pull/229)
 
