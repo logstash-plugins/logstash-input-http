@@ -115,9 +115,9 @@ describe LogStash::Inputs::Http do
       let(:threads) { rand(4) + 1 }
       let(:logstash_queue) { SizedQueue.new(logstash_queue_size) }
       let(:client_options) { {
-        "request_timeout" => 0.1,
-        "connect_timeout" => 3,
-        "socket_timeout" => 0.1
+        request_timeout: 5,
+        connect_timeout: 3,
+        socket_timeout: 1
       } }
 
       let(:config) { { "port" => port, "threads" => threads, "max_pending_requests" => max_pending_requests } }
