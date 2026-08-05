@@ -69,14 +69,14 @@ describe LogStash::Inputs::Http do
     end
 
     describe "handling overflowing requests with a 429" do
-      let(:logstash_queue_size) { rand(10) + 1 }
-      let(:max_pending_requests) { rand(5) + 1 }
-      let(:threads) { rand(4) + 1 }
+      let(:logstash_queue_size) { 1 }
+      let(:max_pending_requests) { 1 }
+      let(:threads) { 1 }
       let(:logstash_queue) { SizedQueue.new(logstash_queue_size) }
       let(:client_options) { {
-        "request_timeout" => 0.1,
+        "request_timeout" => 1,
         "connect_timeout" => 3,
-        "socket_timeout" => 0.1
+        "socket_timeout" => 0.2
       } }
 
       let(:config) { { "port" => port, "threads" => threads, "max_pending_requests" => max_pending_requests } }
@@ -100,7 +100,8 @@ describe LogStash::Inputs::Http do
             end
           end
 
-          sleep 1 # let those requests go, but not so long that our block-detector starts emitting 429's
+          # wait for blocking requests to be in flight rather than using a fixed sleep
+          blocked_calls.each { |t| Thread.pass until t.status == 'sleep' || !t.alive? }
 
           # by now we should be rejecting with 429 since the backlog is full
           response = client.post("http://127.0.0.1:#{port}", :body => '{}').call
@@ -118,14 +119,14 @@ describe LogStash::Inputs::Http do
     end
 
     describe "observing queue back-pressure" do
-      let(:logstash_queue_size) { rand(10) + 1 }
-      let(:max_pending_requests) { rand(5) + 1 }
-      let(:threads) { rand(4) + 1 }
+      let(:logstash_queue_size) { 1 }
+      let(:max_pending_requests) { 1 }
+      let(:threads) { 1 }
       let(:logstash_queue) { SizedQueue.new(logstash_queue_size) }
       let(:client_options) { {
-        "request_timeout" => 0.1,
+        "request_timeout" => 1,
         "connect_timeout" => 3,
-        "socket_timeout" => 0.1
+        "socket_timeout" => 0.2
       } }
 
       let(:config) { { "port" => port, "threads" => threads, "max_pending_requests" => max_pending_requests } }
@@ -147,14 +148,17 @@ describe LogStash::Inputs::Http do
               end
             end
 
-          sleep 12 # let that requests go, and ensure it is blocking long enough to be problematic
+          # wait for blocking request to be in flight, then wait for the
+          # RejectWhenBlockedInboundHandler threshold (10s) to trigger
+          Thread.pass until blocked_call.status == 'sleep' || !blocked_call.alive?
+          sleep 11
 
           # by now we should be rejecting with 429 since at least one existing request is blocked
-          # for more than 10s.
+          # for more than 10s
           response = client.post("http://127.0.0.1:#{port}", :body => '{}').call
           expect(response.code).to eq(429)
 
-          # ensure that our blocked connections did block
+          # ensure that our blocked connection did block
           aggregate_failures do
             blocked_call.value.tap do |blocked|
               expect(blocked[:result]).to be_nil
