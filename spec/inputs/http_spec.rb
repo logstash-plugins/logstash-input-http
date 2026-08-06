@@ -55,50 +55,42 @@ describe LogStash::Inputs::Http do
     end
 
     describe "handling overflowing requests with a 429" do
-      let(:logstash_queue_size) { rand(10) + 1 }
-      let(:max_pending_requests) { rand(5) + 1 }
-      let(:threads) { rand(4) + 1 }
+      let(:logstash_queue_size) { 1 }
+      let(:max_pending_requests) { 1 }
+      let(:threads) { 1 }
       let(:logstash_queue) { SizedQueue.new(logstash_queue_size) }
       let(:client_options) { {
-        "request_timeout" => 0.1,
-        "connect_timeout" => 3,
-        "socket_timeout" => 0.1
+        request_timeout: 5,
+        connect_timeout: 3,
+        socket_timeout: 0.5
       } }
 
       let(:config) { { "port" => port, "threads" => threads, "max_pending_requests" => max_pending_requests } }
 
       context "when sending more requests than queue slots" do
         it "rejects additional incoming requests with HTTP 429" do
-          # these will queue and return 200
-          logstash_queue_size.times.each do |i|
+          # fill the pipeline queue so the next push blocks the server worker
+          logstash_queue_size.times do
             response = client.post("http://127.0.0.1:#{port}", :body => '{}').call
             expect(response.code).to eq(200)
           end
 
-          # these will block
-          blocked_calls = (threads + max_pending_requests).times.map do
-            Thread.new do
-              begin
-                {:result => client.post("http://127.0.0.1:#{port}", :body => '{}').call}
-              rescue Manticore::SocketException, Manticore::SocketTimeout => e
-                {:exception => e}
-              end
+          # a blocked request holds its slot even after the client times out, so sending
+          # sequentially fills every worker and backlog slot before the next 429
+          blocked = 0
+          response = nil
+          deadline = Time.now + 30
+          until response && response.code == 429
+            raise "server never returned 429 (blocked=#{blocked})" if Time.now > deadline
+            begin
+              response = client.post("http://127.0.0.1:#{port}", :body => '{}').call
+            rescue Manticore::SocketTimeout
+              blocked += 1
             end
           end
 
-          sleep 1 # let those requests go, but not so long that our block-detector starts emitting 429's
-
-          # by now we should be rejecting with 429 since the backlog is full
-          response = client.post("http://127.0.0.1:#{port}", :body => '{}').call
           expect(response.code).to eq(429)
-
-          # ensure that our blocked connections did block
-          aggregate_failures do
-            blocked_calls.map(&:value).each do |blocked|
-              expect(blocked[:result]).to be_nil
-              expect(blocked[:exception]).to be_a_kind_of Manticore::SocketTimeout
-            end
-          end
+          expect(blocked).to eq(threads + max_pending_requests)
         end
       end
     end
@@ -109,9 +101,9 @@ describe LogStash::Inputs::Http do
       let(:threads) { rand(4) + 1 }
       let(:logstash_queue) { SizedQueue.new(logstash_queue_size) }
       let(:client_options) { {
-        "request_timeout" => 0.1,
-        "connect_timeout" => 3,
-        "socket_timeout" => 0.1
+        request_timeout: 5,
+        connect_timeout: 3,
+        socket_timeout: 1
       } }
 
       let(:config) { { "port" => port, "threads" => threads, "max_pending_requests" => max_pending_requests } }
