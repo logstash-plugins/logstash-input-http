@@ -1,3 +1,6 @@
+## 3.11.1
+  - Update Netty dependency to 4.1.137.Final [#240](https://github.com/logstash-plugins/logstash-input-http/pull/240)
+
 ## 3.11.0
   - Implements a functionality to log HTTP traffic, disabled by default. To unable switch on debug logs. [#237](https://github.com/logstash-plugins/logstash-input-http/pull/237) 
 
