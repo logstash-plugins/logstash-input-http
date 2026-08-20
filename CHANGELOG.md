@@ -1,3 +1,6 @@
+## 3.11.0
+  - Implements a functionality to log HTTP traffic, disabled by default. To unable switch on debug logs. [#237](https://github.com/logstash-plugins/logstash-input-http/pull/237) 
+
 ## 3.10.11
   - Fix to use the `Content-type` declared charset to decode the request body [#232](https://github.com/logstash-plugins/logstash-input-http/pull/232)
 

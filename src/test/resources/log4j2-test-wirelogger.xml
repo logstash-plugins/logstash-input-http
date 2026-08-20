@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="warn">
+    <Appenders>
+        <List name="WireLoggerList">
+            <PatternLayout pattern="%m"/>
+        </List>
+    </Appenders>
+    <Loggers>
+        <Logger name="org.logstash.plugins.inputs.http.util.WireLogger" level="debug" additivity="false">
+            <AppenderRef ref="WireLoggerList"/>
+        </Logger>
+        <Root level="warn"/>
+    </Loggers>
+</Configuration>

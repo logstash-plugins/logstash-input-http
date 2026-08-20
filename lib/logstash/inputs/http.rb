@@ -204,6 +204,8 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
     validate_ssl_settings!
 
+    validate_dump_size_system_property!
+    
     if @user && @password
       token = Base64.strict_encode64("#{@user}:#{@password.value}")
       @auth_token = "Basic #{token}"
@@ -297,6 +299,12 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
       [http_host, nil]
     end
   end
+  
+  def validate_dump_size_system_property!
+    java_import org.logstash.plugins.inputs.http.util.WireLogger
+    WireLogger.validate_dump_size_property
+  end
+  private :validate_dump_size_system_property!
 
   def validate_ssl_settings!
     ssl_config_name = original_params.include?('ssl') ? 'ssl' : 'ssl_enabled'
