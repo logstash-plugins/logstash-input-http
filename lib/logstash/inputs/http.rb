@@ -220,7 +220,10 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   def decode_body(headers, remote_address, body, default_codec, additional_codecs)
     content_type = headers.fetch("content_type", "")
-    codec = additional_codecs.fetch(HttpUtil.getMimeType(content_type), default_codec)
+    # Clone the codec per request so concurrent (pipelined) requests on the same
+    # connection do not share a stateful codec buffer (e.g. json_lines'
+    # BufferedTokenizer), which otherwise interleaves and drops/corrupts data.
+    codec = additional_codecs.fetch(HttpUtil.getMimeType(content_type), default_codec).clone
     codec.decode(body) { |event| push_decoded_event(headers, remote_address, event) }
     codec.flush { |event| push_decoded_event(headers, remote_address, event) }
     true
