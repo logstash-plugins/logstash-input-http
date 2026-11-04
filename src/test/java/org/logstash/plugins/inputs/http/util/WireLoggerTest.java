@@ -106,13 +106,15 @@ class WireLoggerTest {
         }
         // Implicit close of auto-closeable client so that "Closing connection" is logged before we assert.
 
-        List<String> messages = logSpy.getMessages();
+        // "Closing connection" is logged asynchronously by the server's event loop, and
+        // ListAppender#getMessages returns a snapshot, so re-read the messages on each poll.
         Awaitility.await()
                 .atMost(5, TimeUnit.SECONDS)
-                .until(() -> messages.size() >= 4);
-        
-        assertThat(messages, hasItem(matchesPattern("Opening connection .*" + HOST + ":\\d+")));
-        assertThat(messages, hasItem(matchesPattern("Closing connection .*" + HOST + ":\\d+")));
+                .untilAsserted(() -> {
+                    List<String> messages = logSpy.getMessages();
+                    assertThat(messages, hasItem(matchesPattern("Opening connection .*" + HOST + ":\\d+")));
+                    assertThat(messages, hasItem(matchesPattern("Closing connection .*" + HOST + ":\\d+")));
+                });
     }
 
     @Test
