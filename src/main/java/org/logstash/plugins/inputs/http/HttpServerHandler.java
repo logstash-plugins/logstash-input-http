@@ -10,7 +10,10 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 
+import org.logstash.plugins.inputs.http.util.TlsPeerInfo;
+
 import java.net.InetSocketAddress;
+import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
@@ -35,7 +38,8 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<FullHttpReque
     public void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) {
         final String remoteAddress = ((InetSocketAddress) ctx.channel().remoteAddress()).getAddress().getHostAddress();
         msg.retain();
-        final MessageProcessor messageProcessor = new MessageProcessor(ctx, msg, remoteAddress, messageHandler, responseStatus);
+        final Map<String, String> tlsPeerInfo = TlsPeerInfo.of(ctx);
+        final MessageProcessor messageProcessor = new MessageProcessor(ctx, msg, remoteAddress, tlsPeerInfo, messageHandler, responseStatus);
         executorGroup.execute(messageProcessor);
     }
 
