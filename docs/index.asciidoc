@@ -148,6 +148,7 @@ Please check out <<plugins-{type}s-{plugin}-obsolete-options>> for details.
 | <<plugins-{type}s-{plugin}-ssl_keystore_password>> |<<password,password>>|No
 | <<plugins-{type}s-{plugin}-ssl_keystore_path>> |<<path,path>>|No
 | <<plugins-{type}s-{plugin}-ssl_keystore_type>> |<<string,string>>|No
+| <<plugins-{type}s-{plugin}-ssl_peer_metadata>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-ssl_supported_protocols>> |<<array,array>>|No
 | <<plugins-{type}s-{plugin}-ssl_truststore_password>> |<<password,password>>|No
 | <<plugins-{type}s-{plugin}-ssl_truststore_path>> |<<path,path>>|No
@@ -426,6 +427,69 @@ The format of the keystore file. It must be either `jks` or `pkcs12`.
  * There is no default value for this setting.
 
 Set the JKS keystore password
+
+[id="plugins-{type}s-{plugin}-ssl_peer_metadata"]
+===== `ssl_peer_metadata`
+
+  * Value type is <<boolean,boolean>>
+  * Default value is `false`
+
+When a client connects using mutual TLS, add the details of its certificate to the `[@metadata]` field of the events.
+Requires <<plugins-{type}s-{plugin}-ssl_client_authentication>> to be `optional` or `required`.
+The `tls_peer` entries mirror those of the {logstash-ref}/plugins-inputs-beats.html[beats input].
+
+[cols="<l,<l,<e",options="header"]
+|=======================================================================
+|ECS `v1`, `v8` |ECS `disabled` |Description
+
+|[@metadata][tls_peer][status]
+|[@metadata][tls_peer][status]
+|`verified` when the client presented a certificate (which was validated), `unverified` otherwise. The other entries are only available when `verified`.
+
+|[@metadata][input][http][tls][client][subject]
+|[@metadata][tls_peer][subject]
+|Distinguished name of the certificate subject (RFC 2253), such as `CN=client,O=Logstash`
+
+|[@metadata][input][http][tls][version_protocol]
+|[@metadata][tls_peer][protocol]
+|TLS version used, such as `TLSv1.3`
+
+|[@metadata][input][http][tls][cipher]
+|[@metadata][tls_peer][cipher_suite]
+|Cipher suite used
+
+|[@metadata][input][http][tls][client][x509][subject][common_name]
+|[@metadata][tls_peer][subject_cn]
+|Most specific common name of the subject, when present
+
+|[@metadata][input][http][tls][client][issuer]
+|[@metadata][tls_peer][issuer_dn]
+|Distinguished name of the issuer (RFC 2253)
+
+|[@metadata][input][http][tls][client][x509][serial_number]
+|[@metadata][tls_peer][serial]
+|Serial number, in lowercase hexadecimal
+
+|[@metadata][input][http][tls][client][not_before]
+|[@metadata][tls_peer][not_before]
+|Start of the validity period, as an ISO-8601 timestamp
+
+|[@metadata][input][http][tls][client][not_after]
+|[@metadata][tls_peer][not_after]
+|End of the validity period, as an ISO-8601 timestamp
+
+|[@metadata][input][http][tls][client][hash][sha256]
+|[@metadata][tls_peer][fingerprint_sha256]
+|SHA-256 fingerprint of the certificate, in lowercase hexadecimal
+
+|[@metadata][input][http][tls][client][x509][alternative_names]
+|[@metadata][tls_peer][sans]
+|Array of subject alternative names, formatted as `type:value` (types: `dns`, `email`, `uri`, `ip`, `dir`)
+|=======================================================================
+
+NOTE: Request headers whose name starts with `Tls-Peer-` are always discarded, so a client cannot forge these details.
+The `[@metadata]` field is not persisted by outputs: copy what you need into regular fields with a filter, for example
+`mutate { copy => { "[@metadata][tls_peer][subject_cn]" => "client_cn" } }`.
 
 [id="plugins-{type}s-{plugin}-ssl_supported_protocols"]
 ===== `ssl_supported_protocols`
