@@ -13,6 +13,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import org.logstash.plugins.inputs.http.util.TlsPeerInfo;
 
 import java.net.InetSocketAddress;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -26,19 +27,26 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<FullHttpReque
     private final IMessageHandler messageHandler;
     private final ThreadPoolExecutor executorGroup;
     private final HttpResponseStatus responseStatus;
+    private final boolean exposeTlsPeerInfo;
 
     public HttpServerHandler(IMessageHandler messageHandler, ThreadPoolExecutor executorGroup,
                              HttpResponseStatus responseStatus) {
+        this(messageHandler, executorGroup, responseStatus, false);
+    }
+
+    public HttpServerHandler(IMessageHandler messageHandler, ThreadPoolExecutor executorGroup,
+                             HttpResponseStatus responseStatus, boolean exposeTlsPeerInfo) {
         this.messageHandler = messageHandler;
         this.executorGroup = executorGroup;
         this.responseStatus = responseStatus;
+        this.exposeTlsPeerInfo = exposeTlsPeerInfo;
     }
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) {
         final String remoteAddress = ((InetSocketAddress) ctx.channel().remoteAddress()).getAddress().getHostAddress();
         msg.retain();
-        final Map<String, String> tlsPeerInfo = TlsPeerInfo.of(ctx);
+        final Map<String, String> tlsPeerInfo = exposeTlsPeerInfo ? TlsPeerInfo.of(ctx) : Collections.emptyMap();
         final MessageProcessor messageProcessor = new MessageProcessor(ctx, msg, remoteAddress, tlsPeerInfo, messageHandler, responseStatus);
         executorGroup.execute(messageProcessor);
     }
