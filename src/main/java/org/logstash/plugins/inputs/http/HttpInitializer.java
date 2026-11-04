@@ -23,6 +23,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class HttpInitializer extends ChannelInitializer<SocketChannel> {
     private final IMessageHandler messageHandler;
     private SslHandlerProvider sslHandlerProvider;
+    private boolean exposeTlsPeerInfo = false;
     private final int maxContentLength;
     private final HttpResponseStatus responseStatus;
     private final ThreadPoolExecutor executorGroup;
@@ -52,7 +53,12 @@ public class HttpInitializer extends ChannelInitializer<SocketChannel> {
         pipeline.addLast(new RejectWhenBlockedInboundHandler(executionObserver, Duration.ofSeconds(10)));
         pipeline.addLast(new HttpContentDecompressor());
         pipeline.addLast(new HttpObjectAggregator(maxContentLength));
-        pipeline.addLast(new HttpServerHandler(messageHandler.copy(), executorGroup, responseStatus));
+        pipeline.addLast(new HttpServerHandler(messageHandler.copy(), executorGroup, responseStatus, exposeTlsPeerInfo));
+    }
+
+    /** Makes the details of the client certificate available to the message handler (requires SSL). */
+    public void enableTlsPeerInfo() {
+        this.exposeTlsPeerInfo = true;
     }
 
     public void enableSSL(SslHandlerProvider sslHandlerProvider) {

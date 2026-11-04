@@ -35,6 +35,15 @@ public class NettyHttpServer implements Runnable, Closeable {
                            final SslHandlerProvider sslHandlerProvider, final int threads,
                            final int maxPendingRequests, final int maxContentLength, final int responseCode)
     {
+        this(id, host, port, messageHandler, sslHandlerProvider, threads, maxPendingRequests, maxContentLength,
+             responseCode, false);
+    }
+
+    public NettyHttpServer(final String id, final String host, final int port, final IMessageHandler messageHandler,
+                           final SslHandlerProvider sslHandlerProvider, final int threads,
+                           final int maxPendingRequests, final int maxContentLength, final int responseCode,
+                           final boolean exposeTlsPeerInfo)
+    {
         this.host = host;
         this.port = port;
         this.responseStatus = HttpResponseStatus.valueOf(responseCode);
@@ -55,6 +64,9 @@ public class NettyHttpServer implements Runnable, Closeable {
 
         if (sslHandlerProvider != null) {
             httpInitializer.enableSSL(sslHandlerProvider);
+            if (exposeTlsPeerInfo) {
+                httpInitializer.enableTlsPeerInfo();
+            }
         }
 
         serverBootstrap = new ServerBootstrap()

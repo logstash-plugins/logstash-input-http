@@ -453,7 +453,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   def create_http_server(message_handler)
     org.logstash.plugins.inputs.http.NettyHttpServer.new(
       @id, @host, @port, message_handler, build_ssl_params, @threads,
-      @max_pending_requests, @max_content_length, @response_code)
+      @max_pending_requests, @max_content_length, @response_code, @ssl_peer_metadata)
   end
 
   def build_ssl_params
