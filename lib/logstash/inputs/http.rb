@@ -126,6 +126,9 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   # target field for the client host of the http request
   config :request_headers_target_field, :validate => :string
 
+  # when mutual TLS is in use, add the details of the client certificate to `[@metadata][tls_peer]`
+  config :ssl_peer_metadata, :validate => :boolean, :default => false
+
   config :threads, :validate => :number, :required => false, :default => ::LogStash::Config::CpuCoreStrategy.maximum
 
   config :max_pending_requests, :validate => :number, :required => false, :default => 200
@@ -155,6 +158,29 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     'cipher_suites',
   ].freeze
 
+  # Where the client certificate details are stored, by `ecs_compatibility`. Mirrors the `beats` input (`ssl_peer_metadata`),
+  # extended with details ECS has fields for (`tls.client.*`).
+  TLS_PEER_FIELDS = {
+    disabled: %w(status subject protocol cipher_suite subject_cn issuer_dn serial not_before not_after fingerprint_sha256 sans)
+                .map { |name| [name, "[@metadata][tls_peer][#{name}]"] }.to_h.freeze,
+    v1: {
+      'status'             => '[@metadata][tls_peer][status]',
+      'subject'            => '[@metadata][input][http][tls][client][subject]',
+      'protocol'           => '[@metadata][input][http][tls][version_protocol]',
+      'cipher_suite'       => '[@metadata][input][http][tls][cipher]',
+      'subject_cn'         => '[@metadata][input][http][tls][client][x509][subject][common_name]',
+      'issuer_dn'          => '[@metadata][input][http][tls][client][issuer]',
+      'serial'             => '[@metadata][input][http][tls][client][x509][serial_number]',
+      'not_before'         => '[@metadata][input][http][tls][client][not_before]',
+      'not_after'          => '[@metadata][input][http][tls][client][not_after]',
+      'fingerprint_sha256' => '[@metadata][input][http][tls][client][hash][sha256]',
+      'sans'               => '[@metadata][input][http][tls][client][x509][alternative_names]',
+    }.freeze
+  }.freeze
+
+  # Prefix of the pseudo request headers carrying the client certificate details (see `TlsPeerInfo.java`)
+  TLS_PEER_HEADER_PREFIX = 'tls_peer_'.freeze
+
   SSL_CLIENT_AUTH_NONE = 'none'.freeze
   SSL_CLIENT_AUTH_OPTIONAL = 'optional'.freeze
   SSL_CLIENT_AUTH_REQUIRED = 'required'.freeze
@@ -165,6 +191,8 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     'force_peer' => SSL_CLIENT_AUTH_REQUIRED
   }.freeze
 
+  private_constant :TLS_PEER_FIELDS
+  private_constant :TLS_PEER_HEADER_PREFIX
   private_constant :SSL_CLIENT_AUTH_NONE
   private_constant :SSL_CLIENT_AUTH_OPTIONAL
   private_constant :SSL_CLIENT_AUTH_REQUIRED
@@ -202,6 +230,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
     @remote_host_target_field ||= ecs_select[disabled: "host", v1: "[host][ip]"]
     @request_headers_target_field ||= ecs_select[disabled: "headers", v1: "[@metadata][input][http][request][headers]"]
+    @tls_peer_fields = ecs_select[disabled: TLS_PEER_FIELDS[:disabled], v1: TLS_PEER_FIELDS[:v1]]
   end # def register
 
   def run(queue)
@@ -221,8 +250,9 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   def decode_body(headers, remote_address, body, default_codec, additional_codecs)
     content_type = headers.fetch("content_type", "")
     codec = additional_codecs.fetch(HttpUtil.getMimeType(content_type), default_codec)
-    codec.decode(body) { |event| push_decoded_event(headers, remote_address, event) }
-    codec.flush { |event| push_decoded_event(headers, remote_address, event) }
+    tls_peer = extract_tls_peer!(headers)
+    codec.decode(body) { |event| push_decoded_event(headers, remote_address, tls_peer, event) }
+    codec.flush { |event| push_decoded_event(headers, remote_address, tls_peer, event) }
     true
   rescue => e
     @logger.error(
@@ -234,12 +264,31 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     false
   end
 
-  def push_decoded_event(headers, remote_address, event)
+  # Moves the client certificate details out of the request headers.
+  # @return [Hash] the details without their prefix, empty unless the client presented a certificate
+  def extract_tls_peer!(headers)
+    headers.key_set.to_a.each_with_object({}) do |key, tls_peer|
+      next unless key.start_with?(TLS_PEER_HEADER_PREFIX)
+      name = key.delete_prefix(TLS_PEER_HEADER_PREFIX)
+      value = headers.remove(key)
+      tls_peer[name] = name == 'sans' ? value.split("\n") : value
+    end
+  end
+
+  def push_decoded_event(headers, remote_address, tls_peer, event)
     add_ecs_fields(headers, event)
+    add_tls_peer_fields(tls_peer, event) if @ssl_peer_metadata
     event.set(@request_headers_target_field, headers)
     event.set(@remote_host_target_field, remote_address)
     decorate(event)
     @queue << event
+  end
+
+  def add_tls_peer_fields(tls_peer, event)
+    tls_peer.each do |name, value|
+      field = @tls_peer_fields[name]
+      event.set(field, value) if field
+    end
   end
 
   def add_ecs_fields(headers, event)
@@ -313,6 +362,10 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
     end
 
     cli_auth_config_name, cli_auth_optional_val, cli_auth_required_val = provided_ssl_client_authentication_config([SSL_CLIENT_AUTH_OPTIONAL, SSL_CLIENT_AUTH_REQUIRED])
+    if @ssl_peer_metadata && !ssl_client_authentication_enabled?
+      raise LogStash::ConfigurationError, "Using `ssl_peer_metadata` requires setting `#{cli_auth_config_name}` to `#{cli_auth_optional_val}` or `#{cli_auth_required_val}`"
+    end
+
     if ssl_client_authentication_enabled?
       # Ensure any CA is configured. By default, the keystore can also be used as CA
       unless ssl_certificate_authorities_configured? || ssl_truststore_configured? || ssl_keystore_configured?

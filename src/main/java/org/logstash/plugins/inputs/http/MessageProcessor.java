@@ -15,6 +15,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.logstash.plugins.inputs.http.util.RejectableRunnable;
+import org.logstash.plugins.inputs.http.util.TlsPeerInfo;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -25,16 +26,18 @@ public class MessageProcessor implements RejectableRunnable {
     private final ChannelHandlerContext ctx;
     private final FullHttpRequest req;
     private final String remoteAddress;
+    private final Map<String, String> tlsPeerInfo;
     private final IMessageHandler messageHandler;
     private final HttpResponseStatus responseStatus;
 
     private final static Logger LOGGER = LogManager.getLogger(MessageHandler.class);
 
-    MessageProcessor(ChannelHandlerContext ctx, FullHttpRequest req, String remoteAddress,
+    MessageProcessor(ChannelHandlerContext ctx, FullHttpRequest req, String remoteAddress, Map<String, String> tlsPeerInfo,
                             IMessageHandler messageHandler, HttpResponseStatus responseStatus) {
         this.ctx = ctx;
         this.req = req;
         this.remoteAddress = remoteAddress;
+        this.tlsPeerInfo = tlsPeerInfo;
         this.messageHandler = messageHandler;
         this.responseStatus = responseStatus;
     }
@@ -123,8 +126,12 @@ public class MessageProcessor implements RejectableRunnable {
             String key = header.getKey();
             key = key.toLowerCase();
             key = key.replace('-', '_');
+            if (TlsPeerInfo.isReservedKey(key)) {
+                continue; // reserved for the client certificate details below, must not be forgeable by the client
+            }
             formattedHeaders.put(key, header.getValue());
         }
+        formattedHeaders.putAll(tlsPeerInfo);
         formattedHeaders.put("http_accept", formattedHeaders.remove("accept"));
         formattedHeaders.put("http_host", formattedHeaders.remove("host"));
         formattedHeaders.put("http_user_agent", formattedHeaders.remove("user_agent"));
