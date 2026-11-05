@@ -268,6 +268,77 @@ describe LogStash::Inputs::Http do
           expect(event.get("message")).to eq("Hello")
         end
 
+        context 'client certificate details' do
+          let(:config) { super().merge 'request_headers_target_field' => 'headers' }
+          let(:forged_headers) { { 'Tls-Peer-Subject-Cn' => 'forged', 'Tls-Peer-Subject-Dn' => 'CN=forged' } }
+          let(:response) { client.post(url, :body => { "message" => "Hello" }.to_json, :headers => forged_headers).call }
+          let(:event) { expect(response.code).to eq(200); logstash_queue.pop }
+
+          context 'by default' do
+            it "does not add them to the event" do
+              expect(event.get('[@metadata][tls_peer]')).to be_nil
+              expect(event.get('[@metadata][input][http][tls]')).to be_nil
+            end
+
+            it "does not leak them (nor the forged ones) in the request headers" do
+              expect(event.get('headers').keys.grep(/^tls_peer_/)).to be_empty
+            end
+          end
+
+          tls_peer_fields = {
+            'disabled' => Hash.new { |_, name| "[@metadata][tls_peer][#{name}]" },
+            'v1' => {
+              'status' => '[@metadata][tls_peer][status]',
+              'subject' => '[@metadata][input][http][tls][client][subject]',
+              'protocol' => '[@metadata][input][http][tls][version_protocol]',
+              'cipher_suite' => '[@metadata][input][http][tls][cipher]',
+              'subject_cn' => '[@metadata][input][http][tls][client][x509][subject][common_name]',
+              'issuer_dn' => '[@metadata][input][http][tls][client][issuer]',
+              'serial' => '[@metadata][input][http][tls][client][x509][serial_number]',
+              'not_before' => '[@metadata][input][http][tls][client][not_before]',
+              'not_after' => '[@metadata][input][http][tls][client][not_after]',
+              'fingerprint_sha256' => '[@metadata][input][http][tls][client][hash][sha256]',
+              'sans' => '[@metadata][input][http][tls][client][x509][alternative_names]',
+            }
+          }
+
+          tls_peer_fields.each do |ecs_mode, fields|
+            context "with ssl_peer_metadata enabled and `ecs_compatibility => #{ecs_mode}`" do
+              let(:config) { super().merge 'ssl_peer_metadata' => true, 'ecs_compatibility' => ecs_mode }
+
+              it "adds the details of the client certificate to the metadata" do
+                expect(event.get(fields['status'])).to eq('verified')
+                expect(event.get(fields['subject'])).to eq('CN=client,O=Logstash,L=Http Input,ST=NA,C=LS')
+                expect(event.get(fields['subject_cn'])).to eq('client')
+                expect(event.get(fields['issuer_dn'])).to eq('CN=root,O=Logstash,L=Http Input,ST=NA,C=LS')
+                expect(event.get(fields['serial'])).to eq('4')
+                expect(event.get(fields['not_before'])).to match(/\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z\z/)
+                expect(event.get(fields['not_after'])).to match(/\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z\z/)
+                expect(event.get(fields['fingerprint_sha256'])).to match(/\A\h{64}\z/)
+                expect(event.get(fields['sans'])).to contain_exactly('dns:localhost', 'ip:127.0.0.1')
+                expect(event.get(fields['protocol'])).to match(/\ATLSv1\.[23]\z/)
+                expect(event.get(fields['cipher_suite'])).to start_with('TLS_')
+              end
+
+              it "ignores the headers forged by the client" do
+                expect(event.get(fields['subject_cn'])).to eq('client')
+                expect(event.get('headers').keys.grep(/^tls_peer_/)).to be_empty
+              end
+
+              context 'when the client does not present a certificate' do
+                let(:client_options) { super().merge ssl: { verify: false, ca_file: certificate_path('root.crt') } }
+
+                it "only flags the peer as unverified, and does not trust forged headers" do
+                  expect(event.get(fields['status'])).to eq('unverified')
+                  expect(event.get(fields['subject'])).to be_nil
+                  expect(event.get(fields['subject_cn'])).to be_nil
+                  expect(event.get('headers').keys.grep(/^tls_peer_/)).to be_empty
+                end
+              end
+            end
+          end
+        end
+
         TLS13_ENABLED_BY_DEFAULT = begin
                                      context = javax.net.ssl.SSLContext.getInstance('TLS')
                                      context.init nil, nil, nil
@@ -693,6 +764,22 @@ describe LogStash::Inputs::Http do
           #[2024-10-18T10:09:33,199][INFO ][logstash.inputs.http     ][main][0d48] Starting http input listener {:address=>"0.0.0.0:3333", :ssl_enabled=>true}
           expect(subject.logger).to receive(:info).with(/^Starting http input listener/, hash_including(:ssl_enabled => true))
           subject.run(nil)
+        end
+      end
+
+      context "with ssl_peer_metadata" do
+        let(:config) { super().merge("ssl_peer_metadata" => true) }
+
+        it "should raise a configuration error without client authentication" do
+          expect { subject.register }.to raise_error LogStash::ConfigurationError, /ssl_peer_metadata.*requires/
+        end
+
+        context "and optional client authentication" do
+          let(:config) { super().merge("ssl_client_authentication" => "optional", "ssl_certificate_authorities" => [ssl_certificate.path]) }
+
+          it "should not raise exception" do
+            expect { subject.register }.to_not raise_exception
+          end
         end
       end
 
