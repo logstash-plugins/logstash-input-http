@@ -310,9 +310,13 @@ response format, for example:
     input {
       http {
         response_content => '{"errors": false}'
-        response_headers => { "Content-Type" => "application/json" }
+        response_headers => { "Content-Type" => "application/json" "X-Elastic-Product" => "Elasticsearch" }
       }
     }
+
+The example above makes the response look like an Elasticsearch `_bulk` response, which is what the
+OpenTelemetry Collector Elasticsearch exporter expects when it is pointed at this input.
+The `X-Elastic-Product` header is required by the Elasticsearch client the exporter uses.
 
 If 204 (No Content) is set as the <<plugins-{type}s-{plugin}-response_code>>, the response body will not be sent.
 
