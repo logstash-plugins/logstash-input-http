@@ -1,3 +1,6 @@
+## 4.3.0
+  - Add `response_content` setting to customize the response body, and honor a `Content-Type` set in `response_headers`
+
 ## 4.2.2
   - Update Netty dependency to 4.1.138.Final [#241](https://github.com/logstash-plugins/logstash-input-http/pull/241)
 

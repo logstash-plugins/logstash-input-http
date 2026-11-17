@@ -469,6 +469,23 @@ describe LogStash::Inputs::Http do
         end
       end
     end
+    describe "response content" do
+      it "responds with 'ok' by default" do
+        response = client.post("http://127.0.0.1:#{port}", :body => "hello")
+        response.call
+        expect(response.body).to eq("ok")
+      end
+      context "when response_content and response_headers are configured" do
+        subject { LogStash::Inputs::Http.new("port" => port, "response_content" => '{"errors": false}',
+                                             "response_headers" => { "Content-Type" => "application/json" }) }
+        it "responds with the configured body and content type" do
+          response = client.post("http://127.0.0.1:#{port}", :body => "hello")
+          response.call
+          expect(response.body).to eq('{"errors": false}')
+          expect(response.headers.to_hash).to include("content-type" => "application/json")
+        end
+      end
+    end
   end
 
   describe "ECS support", :ecs_compatibility_support, :aggregate_failures do

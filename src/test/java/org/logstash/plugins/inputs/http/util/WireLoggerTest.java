@@ -75,7 +75,7 @@ class WireLoggerTest {
             }
         };
 
-        server = new NettyHttpServer("test", HOST, port, noopHandler, null, 2, 100, 1024 * 1024, 200);
+        server = new NettyHttpServer("test", HOST, port, noopHandler, null, 2, 100, 1024 * 1024, 200, "ok");
         Thread serverThread = new Thread(server);
         serverThread.setDaemon(true);
         serverThread.setName("Test - NettyHttpServer runner");

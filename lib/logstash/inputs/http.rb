@@ -134,6 +134,10 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
 
   config :response_code, :validate => [200, 201, 202, 204], :default => 200
 
+  # The body of the response returned when a request is processed successfully.
+  # Not sent when `response_code` is 204.
+  config :response_content, :validate => :string, :default => 'ok'
+
   # Obsolete Settings
   config :ssl, :obsolete => "Set 'ssl_enabled' instead."
   config :keystore, :obsolete => "Set 'ssl_keystore_path' instead."
@@ -340,7 +344,7 @@ class LogStash::Inputs::Http < LogStash::Inputs::Base
   def create_http_server(message_handler)
     org.logstash.plugins.inputs.http.NettyHttpServer.new(
       @id, @host, @port, message_handler, build_ssl_params, @threads,
-      @max_pending_requests, @max_content_length, @response_code)
+      @max_pending_requests, @max_content_length, @response_code, @response_content)
   end
 
   def build_ssl_params
