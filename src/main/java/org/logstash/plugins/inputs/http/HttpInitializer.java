@@ -25,14 +25,14 @@ public class HttpInitializer extends ChannelInitializer<SocketChannel> {
     private SslHandlerProvider sslHandlerProvider;
     private final int maxContentLength;
     private final HttpResponseStatus responseStatus;
-    private final String responseContent;
+    private final byte[] responseContent;
     private final ThreadPoolExecutor executorGroup;
 
     private final ExecutionObserver executionObserver = new ExecutionObserver();
 
     public HttpInitializer(IMessageHandler messageHandler, ThreadPoolExecutor executorGroup,
                            int maxContentLength, HttpResponseStatus responseStatus,
-                           String responseContent) {
+                           byte[] responseContent) {
         this.messageHandler = new ExecutionObservingMessageHandler(executionObserver, messageHandler);
         this.executorGroup = executorGroup;
         this.maxContentLength = maxContentLength;

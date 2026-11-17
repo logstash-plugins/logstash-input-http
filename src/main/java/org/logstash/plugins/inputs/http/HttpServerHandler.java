@@ -23,10 +23,10 @@ public class HttpServerHandler extends SimpleChannelInboundHandler<FullHttpReque
     private final IMessageHandler messageHandler;
     private final ThreadPoolExecutor executorGroup;
     private final HttpResponseStatus responseStatus;
-    private final String responseContent;
+    private final byte[] responseContent;
 
     public HttpServerHandler(IMessageHandler messageHandler, ThreadPoolExecutor executorGroup,
-                             HttpResponseStatus responseStatus, String responseContent) {
+                             HttpResponseStatus responseStatus, byte[] responseContent) {
         this.messageHandler = messageHandler;
         this.executorGroup = executorGroup;
         this.responseStatus = responseStatus;

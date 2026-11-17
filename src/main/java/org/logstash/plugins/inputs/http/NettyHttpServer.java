@@ -12,6 +12,7 @@ import org.logstash.plugins.inputs.http.util.CustomRejectedExecutionHandler;
 import org.logstash.plugins.inputs.http.util.SslHandlerProvider;
 
 import java.io.Closeable;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -55,7 +56,9 @@ public class NettyHttpServer implements Runnable, Closeable {
                 new CustomRejectedExecutionHandler());
 
         final HttpInitializer httpInitializer = new HttpInitializer(messageHandler, executorGroup,
-                                                                      maxContentLength, responseStatus, responseContent);
+                                                                      maxContentLength, responseStatus,
+                                                                      // encode once, not per request
+                                                                      responseContent.getBytes(StandardCharsets.UTF_8));
 
         if (sslHandlerProvider != null) {
             httpInitializer.enableSSL(sslHandlerProvider);

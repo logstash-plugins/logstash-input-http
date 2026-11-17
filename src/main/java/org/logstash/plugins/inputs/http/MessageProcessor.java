@@ -1,6 +1,5 @@
 package org.logstash.plugins.inputs.http;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -27,13 +26,13 @@ public class MessageProcessor implements RejectableRunnable {
     private final String remoteAddress;
     private final IMessageHandler messageHandler;
     private final HttpResponseStatus responseStatus;
-    private final String responseContent;
+    private final byte[] responseContent;
 
     private final static Logger LOGGER = LogManager.getLogger(MessageHandler.class);
 
     MessageProcessor(ChannelHandlerContext ctx, FullHttpRequest req, String remoteAddress,
                             IMessageHandler messageHandler, HttpResponseStatus responseStatus,
-                            String responseContent) {
+                            byte[] responseContent) {
         this.ctx = ctx;
         this.req = req;
         this.remoteAddress = remoteAddress;
@@ -101,22 +100,22 @@ public class MessageProcessor implements RejectableRunnable {
 
     private FullHttpResponse generateResponse(Map<String, String> stringHeaders) {
 
-        final FullHttpResponse response = new DefaultFullHttpResponse(
-                req.protocolVersion(),
-                responseStatus);
+        final boolean hasBody = responseStatus != HttpResponseStatus.NO_CONTENT;
+        // the body bytes are shared across requests and never written to, so wrap rather than copy
+        final FullHttpResponse response = hasBody
+                ? new DefaultFullHttpResponse(req.protocolVersion(), responseStatus, Unpooled.wrappedBuffer(responseContent))
+                : new DefaultFullHttpResponse(req.protocolVersion(), responseStatus);
         final DefaultHttpHeaders headers = new DefaultHttpHeaders();
         for(String key : stringHeaders.keySet()) {
             headers.set(key, stringHeaders.get(key));
         }
         response.headers().set(headers);
 
-        if (responseStatus != HttpResponseStatus.NO_CONTENT) {
-            final ByteBuf payload = Unpooled.wrappedBuffer(responseContent.getBytes(StandardCharsets.UTF_8));
-            response.headers().set(HttpHeaderNames.CONTENT_LENGTH, payload.readableBytes());
+        if (hasBody) {
+            response.headers().set(HttpHeaderNames.CONTENT_LENGTH, responseContent.length);
             if (!response.headers().contains(HttpHeaderNames.CONTENT_TYPE)) {
                 response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
             }
-            response.content().writeBytes(payload);
         }
 
         return response;
