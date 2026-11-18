@@ -469,6 +469,137 @@ describe LogStash::Inputs::Http do
         end
       end
     end
+    describe "response content" do
+      let(:url) { "http://127.0.0.1:#{port}" }
+      let(:response) { client.post(url, :body => "hello").call }
+      let(:response_headers) { response.headers.to_hash }
+
+      context "by default" do
+        it "responds with 'ok' as text/plain" do
+          expect(response.body).to eq("ok")
+          expect(response_headers).to include("content-type" => "text/plain", "content-length" => "2")
+        end
+      end
+
+      context "when response_content and a Content-Type response header are configured" do
+        subject { LogStash::Inputs::Http.new("port" => port, "response_content" => '{"errors": false}',
+                                             "response_headers" => { "Content-Type" => "application/json" }) }
+        it "responds with the configured body and content type" do
+          expect(response.body).to eq('{"errors": false}')
+          expect(response_headers).to include("content-type" => "application/json", "content-length" => "17")
+        end
+      end
+
+      context "when response_content is configured without a Content-Type response header" do
+        subject { LogStash::Inputs::Http.new("port" => port, "response_content" => "custom",
+                                             "response_headers" => { "x-custom" => "yes" }) }
+        it "falls back to text/plain and keeps the other headers" do
+          expect(response.body).to eq("custom")
+          expect(response_headers).to include("content-type" => "text/plain", "x-custom" => "yes")
+        end
+      end
+
+      context "when response_content is empty" do
+        subject { LogStash::Inputs::Http.new("port" => port, "response_content" => "") }
+        it "responds with an empty body" do
+          expect(response.code).to eq(200)
+          expect(response.body.to_s).to eq("")
+          expect(response_headers).to include("content-length" => "0")
+        end
+      end
+
+      context "when response_content has multi-byte characters" do
+        let(:content) { "ñandú ✓ 日本語" }
+        subject { LogStash::Inputs::Http.new("port" => port, "response_content" => content) }
+        it "encodes it as UTF-8 and sets Content-Length in bytes" do
+          expect(response.body.dup.force_encoding("UTF-8")).to eq(content)
+          expect(response_headers).to include("content-length" => content.bytesize.to_s)
+        end
+      end
+
+      context "when response_content is configured with response_code 204" do
+        subject { LogStash::Inputs::Http.new("port" => port, "response_code" => 204, "response_content" => "ignored") }
+        it "does not send a body" do
+          expect(response.code).to eq(204)
+          expect(response.body.to_s).to eq("")
+        end
+      end
+
+      context "when response_content is configured with a non-default response_code" do
+        subject { LogStash::Inputs::Http.new("port" => port, "response_code" => 202, "response_content" => "accepted") }
+        it "sends the body with that code" do
+          expect(response.code).to eq(202)
+          expect(response.body).to eq("accepted")
+        end
+      end
+
+      context "when called repeatedly and concurrently" do
+        subject { LogStash::Inputs::Http.new("port" => port, "response_content" => '{"errors": false}',
+                                             "response_headers" => { "Content-Type" => "application/json" }) }
+        it "returns the same intact body every time" do
+          bodies = 4.times.map do
+            Thread.new { 25.times.map { client.post(url, :body => "hello").call.body } }
+          end.flat_map(&:value)
+          expect(bodies.size).to eq(100)
+          expect(bodies.uniq).to eq(['{"errors": false}'])
+        end
+      end
+
+      context "when the request is unauthorized" do
+        subject { LogStash::Inputs::Http.new("port" => port, "user" => "test", "password" => "pwd",
+                                             "response_content" => "custom") }
+        it "does not use the configured content" do
+          expect(response.code).to eq(401)
+          expect(response.body.to_s).not_to include("custom")
+        end
+      end
+    end
+
+    describe "response_headers" do
+      let(:url) { "http://127.0.0.1:#{port}" }
+      let(:response) { client.post(url, :body => "hello").call }
+      let(:response_headers) { response.headers.to_hash }
+
+      context "with a custom Content-Type" do
+        subject { LogStash::Inputs::Http.new("port" => port, "response_headers" => { "Content-Type" => "text/csv" }) }
+        it "is not overwritten with text/plain" do
+          expect(response_headers).to include("content-type" => "text/csv")
+          expect(response.body).to eq("ok")
+        end
+      end
+
+      context "with a lower-case content-type" do
+        subject { LogStash::Inputs::Http.new("port" => port, "response_headers" => { "content-type" => "application/json" }) }
+        it "is not overwritten with text/plain" do
+          expect(response_headers).to include("content-type" => "application/json")
+        end
+      end
+
+      context "with a custom Content-Type and other headers" do
+        subject { LogStash::Inputs::Http.new("port" => port,
+                                             "response_headers" => { "Content-Type" => "text/html", "x-one" => "1", "x-two" => "2" }) }
+        it "keeps all of them" do
+          expect(response_headers).to include("content-type" => "text/html", "x-one" => "1", "x-two" => "2")
+        end
+      end
+
+      context "with a Content-Length" do
+        subject { LogStash::Inputs::Http.new("port" => port, "response_headers" => { "Content-Length" => "999" }) }
+        it "is still computed from the actual body" do
+          expect(response_headers).to include("content-length" => "2")
+          expect(response.body).to eq("ok")
+        end
+      end
+
+      context "with a custom Content-Type and response_code 204" do
+        subject { LogStash::Inputs::Http.new("port" => port, "response_code" => 204,
+                                             "response_headers" => { "Content-Type" => "application/json" }) }
+        it "sends no body" do
+          expect(response.code).to eq(204)
+          expect(response.body.to_s).to eq("")
+        end
+      end
+    end
   end
 
   describe "ECS support", :ecs_compatibility_support, :aggregate_failures do

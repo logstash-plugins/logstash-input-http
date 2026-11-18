@@ -25,16 +25,19 @@ public class HttpInitializer extends ChannelInitializer<SocketChannel> {
     private SslHandlerProvider sslHandlerProvider;
     private final int maxContentLength;
     private final HttpResponseStatus responseStatus;
+    private final byte[] responseContent;
     private final ThreadPoolExecutor executorGroup;
 
     private final ExecutionObserver executionObserver = new ExecutionObserver();
 
     public HttpInitializer(IMessageHandler messageHandler, ThreadPoolExecutor executorGroup,
-                           int maxContentLength, HttpResponseStatus responseStatus) {
+                           int maxContentLength, HttpResponseStatus responseStatus,
+                           byte[] responseContent) {
         this.messageHandler = new ExecutionObservingMessageHandler(executionObserver, messageHandler);
         this.executorGroup = executorGroup;
         this.maxContentLength = maxContentLength;
         this.responseStatus = responseStatus;
+        this.responseContent = responseContent;
     }
 
     protected void initChannel(SocketChannel socketChannel) throws Exception {
@@ -52,7 +55,7 @@ public class HttpInitializer extends ChannelInitializer<SocketChannel> {
         pipeline.addLast(new RejectWhenBlockedInboundHandler(executionObserver, Duration.ofSeconds(10)));
         pipeline.addLast(new HttpContentDecompressor());
         pipeline.addLast(new HttpObjectAggregator(maxContentLength));
-        pipeline.addLast(new HttpServerHandler(messageHandler.copy(), executorGroup, responseStatus));
+        pipeline.addLast(new HttpServerHandler(messageHandler.copy(), executorGroup, responseStatus, responseContent));
     }
 
     public void enableSSL(SslHandlerProvider sslHandlerProvider) {
